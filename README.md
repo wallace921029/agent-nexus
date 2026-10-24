@@ -1,90 +1,92 @@
 # agent-nexus
 
-**一份配置，同步给你电脑上所有的 AI 编程工具。**
+[简体中文](README.zh-CN.md)
 
-同时用着 Claude Code、Codex、Copilot、OpenCode……每个工具都要单独配一遍「全局规则、技能、MCP 服务」，改一处就得挨个工具再改一遍。agent-nexus 把这些集中放在一个地方（`~/.agent-nexus`），写一次，一键分发给所有工具：
+**One config, synced to every AI coding tool on your machine.**
 
-- **全局指令**：写一份 `AGENTS.md`，自动转成各工具要的文件名（CLAUDE.md、copilot-instructions.md 等），一键下发
-- **技能（skills，给 AI 助手扩展能力的指令包）**：集中放在一个目录，面板里勾选即可同时分发到各工具
-- **MCP 服务（MCP：Model Context Protocol，让 AI 工具调用外部功能的标准接口）**：所有服务的地址集中写在一个文件里，各工具只接入 agent-nexus 这一个入口，以后新增服务不用再挨个工具改配置
+Using Claude Code, Codex, Copilot, OpenCode and more at the same time? Each tool wants its own copy of your global rules, skills, and MCP servers — every change has to be repeated tool by tool. agent-nexus keeps all of it in one place (`~/.agent-nexus`): write once, distribute everywhere with one click.
 
-## 快速开始：npx 打开网页面板
+- **Global instructions**: write a single `AGENTS.md`; it is rendered under each tool's expected file name (CLAUDE.md, copilot-instructions.md, …) and distributed in one click
+- **Skills** (instruction packages that extend what an AI assistant can do): keep them in one folder and distribute them to every tool by ticking checkboxes in the panel
+- **MCP servers** (MCP: Model Context Protocol — the standard interface for AI tools to call external capabilities): list all your servers in one file and point every tool at agent-nexus as its single MCP entry; adding a server later no longer means editing every tool's config
 
-要求 Node.js ≥ 20，无需安装，两条命令：
+## Quick start: npx + web panel
+
+Requires Node.js ≥ 20. No install needed — two commands:
 
 ```bash
-npx -y @wallace921029/agent-nexus init   # 首次使用：创建 ~/.agent-nexus（AGENTS.md、mcp.json、skills/）
-npx -y @wallace921029/agent-nexus web    # 启动网页面板，浏览器自动打开 http://127.0.0.1:8741
+npx -y @wallace921029/agent-nexus init   # first run: create ~/.agent-nexus (AGENTS.md, mcp.json, skills/)
+npx -y @wallace921029/agent-nexus web    # start the web panel; the browser opens http://127.0.0.1:8741 automatically
 ```
 
-日常操作都可以在面板里完成：
+Everything you do day-to-day happens in the panel:
 
-- **总览**：健康度、各工具接入状态
-- **AGENTS.md**：编辑、预览、下发 / 收回
-- **Skills**：分发矩阵，勾选即分发或收回，还能新建技能
-- **MCP**：编辑服务清单，一键复制各工具的接入配置
-- **文件**：直接编辑 `~/.agent-nexus` 里的任何文件（带语法高亮）
+- **Overview**: health at a glance, per-tool integration status
+- **AGENTS.md**: edit, preview, distribute / retract
+- **Skills**: distribution matrix — tick to distribute or retract; create new skills too
+- **MCP**: edit the server list, copy each tool's connect snippet with one click
+- **Files**: edit any file under `~/.agent-nexus` directly (with syntax highlighting)
 
-面板只监听本机（127.0.0.1），无密码，个人电脑自用；Ctrl+C 退出。不想用面板的话，全部操作也都有命令行版本，见下面「命令一览」。
+The panel listens on 127.0.0.1 only, has no password, and is meant for personal use on your own machine; stop it with Ctrl+C. Prefer the terminal? Every operation is also available as a CLI command — see "Command reference" below.
 
-## 支持的工具
+## Supported tools
 
-| 工具 | 全局指令 | Skills | MCP |
+| Tool | Instructions | Skills | MCP |
 |---|---|---|---|
 | Claude Code | ✅ | ✅ | ✅ |
-| Codex（CLI / ChatGPT 桌面版） | ✅ | ✅ | ✅ |
-| GitHub Copilot（CLI / VS Code / App） | ✅ | ✅ | ✅ |
-| OpenCode（CLI / 桌面版） | ✅ | ✅ | ✅ |
-| Antigravity（桌面版 / CLI） | ✅ | ✅ | ✅ |
+| Codex (CLI / ChatGPT desktop) | ✅ | ✅ | ✅ |
+| GitHub Copilot (CLI / VS Code / App) | ✅ | ✅ | ✅ |
+| OpenCode (CLI / desktop) | ✅ | ✅ | ✅ |
+| Antigravity (desktop / CLI) | ✅ | ✅ | ✅ |
 | DeepSeek Harness | ✅ | ✅ | ✅ |
 | ZCode | ✅ | ✅ | ✅ |
-| Claude Desktop | —（无本地指令文件） | 需在应用内上传 | ✅ |
+| Claude Desktop | — (no local instructions file) | upload in-app | ✅ |
 
-几点行为说明：
+Behavior notes:
 
-- 指令和技能都以软链接（Windows 上为 junction）下发，不在各工具目录里产生重复副本；目标位置已有别人的文件时会跳过不动，不会覆盖
-- 每个工具的分发路径都可以改：面板里对应行的 ✎ 按钮
-- 需要给某个工具加专属差异时，在 `~/.agent-nexus/overlays/<工具id>.md` 里写，只会追加给那一家
+- Instructions and skills are distributed as symlinks (junctions on Windows) — no duplicate copies inside each tool's directory. If the target already holds someone else's file: instruction files are backed up automatically (renamed with a timestamp) and then taken over, while skills are left untouched and reported — nothing is ever silently overwritten
+- Every tool's distribution paths are customizable via the ✎ button on its row in the panel
+- To give one specific tool some extra rules, put them in `~/.agent-nexus/overlays/<tool-id>.md` — they are appended to that tool only
 
-## MCP 集中管理
+## Centralized MCP management
 
-所有 MCP 服务写在一个文件 `~/.agent-nexus/mcp.json`（与 Claude 同款的 mcpServers 格式，可在面板 MCP 页编辑）。各工具接入 agent-nexus 这一个服务后，清单里的所有服务都会自动转发过来：
+All MCP servers live in one file, `~/.agent-nexus/mcp.json` (the same mcpServers format Claude uses; editable in the panel's MCP tab). Once a tool connects to agent-nexus, every server in the list is forwarded to it automatically:
 
 ```bash
-npx -y @wallace921029/agent-nexus mcp snippets --npx   # 生成各工具的接入配置，复制粘贴即可
-npx -y @wallace921029/agent-nexus mcp check            # 逐个测试服务连通性
+npx -y @wallace921029/agent-nexus mcp snippets --npx   # print per-tool connect snippets — copy & paste
+npx -y @wallace921029/agent-nexus mcp check            # test each server's connectivity
 ```
 
-还可以按工具定义不同的子集（profile），比如让某个工具只接其中几个服务；在面板 MCP 页或 `.config/config.json` 的 `mcpProfiles` 里配置。
+You can also define per-tool subsets (profiles) — for example, let one tool see only some of the servers. Configure them in the panel's MCP tab or under `mcpProfiles` in `.config/config.json`.
 
-## 命令一览
+## Command reference
 
-| 命令 | 作用 |
+| Command | What it does |
 |---|---|
-| `init` | 初始化 `~/.agent-nexus` |
-| `web` | 打开网页面板（`-p` 改端口，`--no-open` 不自动开浏览器） |
-| `sync-agents` | 渲染 AGENTS.md 并下发（`-t` 指定工具，`-r` 收回，`-n` 预览不动文件） |
-| `link-skills` | 分发 skills（`-s`/`-t` 限定范围，`-r` 收回，`-n` 预览） |
-| `status` | 查看各工具接入状态 |
-| `doctor` | 体检：断链、冲突、缺文件 |
-| `mcp snippets` | 生成各工具的 MCP 接入配置（`--npx` 用 npx 形式） |
-| `mcp check` | 测试各 MCP 服务连通性 |
+| `init` | Initialize `~/.agent-nexus` |
+| `web` | Start the web panel (`-p` to change the port, `--no-open` to skip opening the browser) |
+| `sync-agents` | Render AGENTS.md and distribute it (`-t` limit to tools, `-r` retract, `-n` dry run) |
+| `link-skills` | Distribute skills (`-s`/`-t` limit scope, `-r` retract, `-n` dry run) |
+| `status` | Show each tool's integration status |
+| `doctor` | Health check: broken links, conflicts, missing files |
+| `mcp snippets` | Print per-tool MCP connect snippets (`--npx` for the npx form) |
+| `mcp check` | Test MCP server connectivity |
 
-## 其他说明
+## Notes
 
-- 为 Codex 启用的技能存放在 `~/.agents/skills`，Copilot / OpenCode / ZCode 也会扫描这个目录，所以也能看到它们
-- Windows：目录用 junction（免管理员）；文件软链接需一次性开启「开发者模式」，未开启时自动改为复制并在 `status` 标注
-- 每台电脑独立一套，不做跨设备同步；中心目录可用 `--center` 参数或 `NEXUS_CENTER` 环境变量重定向
-- 面板无鉴权、仅监听本机，请勿暴露到网络
+- Skills enabled for Codex live in `~/.agents/skills`, which Copilot / OpenCode / ZCode also scan — they will see those skills too
+- Windows: directories use junctions (no admin rights needed); file symlinks require enabling Developer Mode once — without it, files are copied instead and flagged in `status`
+- Each machine keeps its own copy; there is no cross-device sync. The center directory can be relocated with `--center` or the `NEXUS_CENTER` environment variable
+- The panel has no authentication and listens on localhost only — do not expose it to a network
 
-## 从源码运行（开发者）
+## Running from source (development)
 
 ```bash
 git clone https://github.com/wallace921029/agent-nexus.git
 cd agent-nexus && npm install && npm run build
-node dist/cli.js <命令>     # 效果与 npx 相同
-npm run dev:web             # 面板二次开发：前后端同时热更，一条命令起停
-npm test                    # MCP 代理端到端测试
+node dist/cli.js <command>   # same effect as the npx form
+npm run dev:web              # panel development: backend + frontend hot reload, one command
+npm test                     # MCP proxy end-to-end tests
 ```
 
 MIT License
