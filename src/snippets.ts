@@ -34,8 +34,8 @@ export function serverNameFor(profile: string): string {
 
 function cmdParts(opts: SnippetOptions): { command: string; args: string[]; argv: string[] } {
   if (opts.useNpx) {
-    // scoped 包多 bin：用 -p 指定包 + 命令名
-    const args = ['-y', '-p', '@wallace921029/agent-nexus', 'agent-nexus-mcp', '--profile', opts.profile];
+    // 单 bin 包：npx 直接运行唯一可执行文件，参数透传（mcp serve 子命令即代理入口）
+    const args = ['-y', '@wallace921029/agent-nexus', 'mcp', 'serve', '--profile', opts.profile];
     return { command: 'npx', args, argv: ['npx', ...args] };
   }
   const args = [opts.localEntry, '--profile', opts.profile];

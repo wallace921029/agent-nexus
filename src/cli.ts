@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import * as path from 'node:path';
 import { syncAgents, type SyncRow } from './agentsmd.js';
 import { findCenterRoot, defaultCenter } from './paths.js';
-import { runCheck } from './mcproxy.js';
+import { runCheck, runProxy } from './mcproxy.js';
 import { buildSnippets, localMcpEntry } from './snippets.js';
 import { applySkills, listSkills, type SkillsRow } from './skills.js';
 import { collectStatus, runDoctor } from './status.js';
@@ -195,6 +195,15 @@ mcpCmd
       console.log(s.content);
       if (s.note) console.log(`（${s.note}）`);
     }
+  });
+mcpCmd
+  .command('serve')
+  .description('Run the MCP aggregator proxy over stdio (what tool configs spawn)')
+  .option('--profile <name>', 'profile to serve (default: default = all upstreams)', 'default')
+  .option('--mcp-config <file>', 'use a standalone config file (for tests)')
+  .action(async (opts: { profile: string; mcpConfig?: string }) => {
+    const center = opts.mcpConfig ? undefined : centerOf(program.opts());
+    await runProxy({ profile: opts.profile, standaloneConfig: opts.mcpConfig, centerRoot: center });
   });
 mcpCmd
   .command('check')

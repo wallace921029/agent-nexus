@@ -14,7 +14,7 @@
 
 - **AGENTS.md**：公共底座 + 各家 overlay 渲染成各家文件名（CLAUDE.md / GEMINI.md / copilot-instructions.md / AGENTS.md…），软链下发；目标位置已有别人的文件则跳过不动
 - **Skills**：`skills/<名>/SKILL.md` 按矩阵链接到各家原生用户级 skills 目录；支持一键全部分发 / 一键全部收回 / 单个增删
-- **MCP 聚合代理**：`agent-nexus-mcp`（stdio），各家只配这一个 server；默认 profile 全量聚合，命名 profile 输出子集（如 `agent-nexus-mcp-for-claude`）
+- **MCP 聚合代理**：`agent-nexus mcp serve`（stdio，本地也可直接 `node dist/mcp.js`），各家只配这一个 server；默认 profile 全量聚合，命名 profile 输出子集（如 `agent-nexus-mcp-for-claude`）
 - **每个工具的指令位置 / skills 目录都可在 `.config/config.json` 覆盖**（注册表里的只是默认值）：网页面板每行有 ✎ 按钮
 
 三个阶段均已完成：
@@ -23,7 +23,7 @@
 |---|---|---|
 | 一 | CLI：init / sync-agents / link-skills / status / doctor | ✅ |
 | 二 | `agent-nexus web` 本地网页面板 | ✅ |
-| 三 | `agent-nexus-mcp` stdio 聚合代理 + `mcp snippets` / `mcp check` | ✅ |
+| 三 | stdio 聚合代理（`agent-nexus mcp serve`）+ `mcp snippets` / `mcp check` | ✅ |
 
 ## 快速开始
 
@@ -84,7 +84,7 @@ npm run dev:web    # 一条命令：同时起后端（8741）+ Vite 前端（517
 
 细节：dist 不存在会先自动编译；8741 已有面板后端在运行则直接复用不重复起；任一子进程意外退出会连带全部退出（不留孤儿进程）。改完执行 `npm run build:web`（构建 webui 并内嵌进 src/page.generated.ts），再 `npm run build` 编译 CLI；`npm run build:all` 一条龙。
 
-## MCP 聚合代理（agent-nexus-mcp）
+## MCP 聚合代理（agent-nexus mcp serve）
 
 上游集中配置在 `~/.agent-nexus/mcp.json`——**标准 mcpServers 格式**（与 Claude 等工具的配置同款，在 Files 模块中编辑，网页面板 MCP 页只读展示）：
 
@@ -118,8 +118,10 @@ npm run dev:web    # 一条命令：同时起后端（8741）+ Vite 前端（517
 ```bash
 # 例：Claude Code 接默认全量 profile
 claude mcp add -s user agent-nexus-mcp -- node <本仓库>/dist/mcp.js --profile default
+# npm 安装后也可：npx -y @wallace921029/agent-nexus mcp serve --profile default
 # 例：再接一个专属子集 profile（server 名自取）
 claude mcp add -s user agent-nexus-mcp-for-claude -- node <本仓库>/dist/mcp.js --profile for-claude
+# npx 形式：npx -y @wallace921029/agent-nexus mcp serve --profile for-claude
 ```
 
 ```bash
