@@ -9,7 +9,7 @@
   },
   "type": "module",
   "bin": {
-    "agent-nexus": "./dist/cli.js"
+    "agent-nexus": "dist/cli.js"
   },
   "engines": {
     "node": ">=20"
