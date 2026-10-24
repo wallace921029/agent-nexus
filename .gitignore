@@ -1,0 +1,7 @@
+node_modules/
+dist/
+webui/node_modules/
+webui/dist/
+
+# 无关的工作区目录，不入库
+agent-workspace/

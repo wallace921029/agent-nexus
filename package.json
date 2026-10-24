@@ -1,0 +1,39 @@
+{
+  "name": "agent-nexus",
+  "version": "0.1.0",
+  "description": "多 Agent 工具统一配置中心：AGENTS.md 渲染下发、skills 链接矩阵、MCP 聚合代理",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wallace921029/agent-nexus.git"
+  },
+  "type": "module",
+  "bin": {
+    "agent-nexus": "./dist/cli.js",
+    "agent-nexus-mcp": "./dist/mcp.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:web": "npm --prefix webui run build && node scripts/embed-webui.mjs",
+    "build:all": "npm run build:web && npm run build",
+    "prepublishOnly": "npm --prefix webui install && npm run build:all && node test/mcp-e2e.mjs",
+    "dev": "tsc -p tsconfig.json --watch",
+    "dev:web": "node scripts/dev.mjs",
+    "test": "node test/mcp-e2e.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

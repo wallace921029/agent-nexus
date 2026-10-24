@@ -1,0 +1,212 @@
+@import "tailwindcss";
+
+@theme {
+  --color-base: #000000;
+  --color-panel: rgba(255, 255, 255, 0.045);
+  --color-panel2: rgba(255, 255, 255, 0.085);
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-line2: rgba(255, 255, 255, 0.18);
+  --color-fg: #f2f5f9;
+  --color-sub: #9aa3b2;
+  --color-accent: #4c8dff;
+  --color-accent-dim: #1e3a6e;
+  --color-ok: #3fb950;
+  --color-warn: #d29922;
+  --color-err: #f85149;
+  --color-input: rgba(0, 0, 0, 0.4);
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-base: #f2f5f9;
+  --color-panel: rgba(255, 255, 255, 0.72);
+  --color-panel2: rgba(255, 255, 255, 0.92);
+  --color-line: rgba(30, 41, 59, 0.12);
+  --color-line2: rgba(30, 41, 59, 0.22);
+  --color-fg: #172033;
+  --color-sub: #5c6678;
+  --color-accent: #2563eb;
+  --color-accent-dim: #bfdbfe;
+  --color-ok: #15803d;
+  --color-warn: #a16207;
+  --color-err: #dc2626;
+  --color-input: rgba(255, 255, 255, 0.72);
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-fg);
+  font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* 动态环境光：仅做缓慢位移和缩放，保持底色与内容对比度 */
+.ambient-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--color-base);
+  transition: background-color 0.2s ease;
+}
+
+.ambient-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.28) 100%);
+}
+
+:root[data-theme="light"] .ambient-background::after {
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(148, 163, 184, 0.16) 100%);
+}
+
+.ambient-orb {
+  position: absolute;
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(60px);
+  will-change: transform;
+}
+
+.ambient-orb-a {
+  top: -18%;
+  right: -4%;
+  width: min(58rem, 78vw);
+  background: radial-gradient(circle, rgba(76, 141, 255, 0.28) 0%, rgba(76, 141, 255, 0.12) 38%, transparent 72%);
+  opacity: 0.65;
+  animation: ambient-drift-a 28s ease-in-out infinite alternate;
+}
+
+.ambient-orb-b {
+  bottom: -22%;
+  left: -4%;
+  width: min(54rem, 72vw);
+  background: radial-gradient(circle, rgba(104, 87, 184, 0.24) 0%, rgba(76, 65, 138, 0.1) 40%, transparent 74%);
+  opacity: 0.6;
+  animation: ambient-drift-b 34s ease-in-out infinite alternate;
+}
+
+.ambient-orb-c {
+  top: 32%;
+  left: 42%;
+  width: min(40rem, 52vw);
+  background: radial-gradient(circle, rgba(45, 125, 145, 0.16) 0%, rgba(45, 125, 145, 0.06) 42%, transparent 74%);
+  opacity: 0.5;
+  animation: ambient-drift-c 38s ease-in-out infinite alternate;
+}
+
+:root[data-theme="light"] .ambient-orb-a {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.24) 0%, rgba(59, 130, 246, 0.1) 38%, transparent 72%);
+}
+
+:root[data-theme="light"] .ambient-orb-b {
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, rgba(139, 92, 246, 0.08) 40%, transparent 74%);
+}
+
+:root[data-theme="light"] .ambient-orb-c {
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.16) 0%, rgba(20, 184, 166, 0.06) 42%, transparent 74%);
+}
+
+@keyframes ambient-drift-a {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-9vw, 12vh, 0) scale(1.12);
+  }
+}
+
+@keyframes ambient-drift-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.05);
+  }
+  to {
+    transform: translate3d(12vw, -8vh, 0) scale(0.95);
+  }
+}
+
+@keyframes ambient-drift-c {
+  from {
+    transform: translate3d(-4vw, -3vh, 0) scale(0.9);
+  }
+  to {
+    transform: translate3d(8vw, 7vh, 0) scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-orb {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+/* 磨砂玻璃：所有面板元素统一挂 backdrop-filter（未分层规则优先级高于 Tailwind 层） */
+.bg-panel {
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+  backdrop-filter: blur(20px) saturate(135%);
+}
+
+/* 状态点：带辉光 */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: currentColor;
+  flex: none;
+}
+.dot-ok {
+  color: var(--color-ok);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-ok) 80%, transparent);
+}
+.dot-warn {
+  color: var(--color-warn);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-warn) 70%, transparent);
+}
+.dot-err {
+  color: var(--color-err);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-err) 70%, transparent);
+}
+.dot-off {
+  color: var(--color-line2);
+}
+
+/* 细滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line2) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line2);
+  border-radius: 4px;
+}
+
+/* 文件树选中行：左侧强调色指示条 */
+.row-sel {
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+/* 复选框强调色 */
+input[type="checkbox"] {
+  accent-color: var(--color-accent);
+}
