@@ -34,7 +34,8 @@ export function serverNameFor(profile: string): string {
 
 function cmdParts(opts: SnippetOptions): { command: string; args: string[]; argv: string[] } {
   if (opts.useNpx) {
-    const args = ['-y', 'agent-nexus-mcp', '--profile', opts.profile];
+    // scoped 包多 bin：用 -p 指定包 + 命令名
+    const args = ['-y', '-p', '@wallace921029/agent-nexus', 'agent-nexus-mcp', '--profile', opts.profile];
     return { command: 'npx', args, argv: ['npx', ...args] };
   }
   const args = [opts.localEntry, '--profile', opts.profile];
