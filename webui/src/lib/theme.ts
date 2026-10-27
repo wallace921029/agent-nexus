@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { useSyncExternalStore } from 'react';
 
 export type Theme = 'light' | 'dark';
 
@@ -12,22 +12,39 @@ function loadTheme(): Theme {
   }
 }
 
-export const theme = ref<Theme>(loadTheme());
+let currentTheme: Theme = loadTheme();
+const listeners = new Set<() => void>();
 
-export function applyTheme(value: Theme = theme.value): void {
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getSnapshot(): Theme {
+  return currentTheme;
+}
+
+export function useTheme(): Theme {
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+export function applyTheme(value: Theme = currentTheme): void {
   document.documentElement.dataset.theme = value;
 }
 
 export function setTheme(value: Theme): void {
-  theme.value = value;
+  currentTheme = value;
   applyTheme(value);
   try {
     localStorage.setItem(THEME_KEY, value);
   } catch {
     /* 无法持久化时仍保持本次会话内的主题切换 */
   }
+  listeners.forEach((listener) => listener());
 }
 
 export function toggleTheme(): void {
-  setTheme(theme.value === 'dark' ? 'light' : 'dark');
+  setTheme(currentTheme === 'dark' ? 'light' : 'dark');
 }

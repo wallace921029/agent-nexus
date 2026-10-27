@@ -11,7 +11,7 @@ import { initCenter } from './init.js';
 import { TARGET_IDS, type TargetId } from './targets.js';
 import { startWebServer } from './web.js';
 
-const VERSION = '0.1.2';
+const VERSION = '0.2.0';
 
 const MARK: Record<string, string> = {
   linked: '✓ linked',

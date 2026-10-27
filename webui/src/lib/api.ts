@@ -66,8 +66,9 @@ export interface ToolSnippet {
   id: string;
   label: string;
   file: string;
-  kind: 'cli' | 'json' | 'toml';
+  kind: 'cli' | 'json' | 'toml' | 'yaml';
   content: string;
+  cli?: string;
   note?: string;
 }
 
