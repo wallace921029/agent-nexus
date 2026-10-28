@@ -1,6 +1,6 @@
 {
   "name": "@wallace921029/agent-nexus",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "多 Agent 工具统一配置中心：AGENTS.md 渲染下发、skills 链接矩阵、MCP 聚合代理",
   "license": "MIT",
   "repository": {

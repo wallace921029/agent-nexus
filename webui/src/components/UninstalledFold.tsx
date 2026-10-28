@@ -1,9 +1,18 @@
 import { useState, type ReactNode } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, type Variants } from 'motion/react';
 import Ic from './Ic';
 
 /* 未安装工具折叠区：默认收起，点击展开；children = 未安装工具的卡片/行
    variant: card = 卡片列表语境（Agents/Skills）；row = 分隔行列表语境（Dashboard） */
+
+// 内容包装必须用「标签形式」variants：子行靠 variants 传播拿到 visible，
+// 若这里用对象形式 initial/animate 会切断传播，子行会卡在 hidden（透明度 0）
+const foldVariants: Variants = {
+  hidden: { opacity: 0, height: 0 },
+  visible: { opacity: 1, height: 'auto' },
+  exit: { opacity: 0, height: 0 },
+};
+
 interface UninstalledFoldProps {
   count: number;
   variant?: 'card' | 'row';
@@ -38,9 +47,10 @@ export default function UninstalledFold({ count, variant = 'card', children }: U
         {open ? (
           <motion.div
             className={`mt-2 ${contentClass}`}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            variants={foldVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             style={{ overflow: 'hidden' }}
           >
