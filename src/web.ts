@@ -10,6 +10,7 @@ import { applySkills } from './skills.js';
 import { buildSnippets, localMcpEntry } from './snippets.js';
 import { runDoctor } from './status.js';
 import { effectiveTarget, TARGET_IDS, type TargetId } from './targets.js';
+import { VERSION } from './version.js';
 
 /**
  * agent-nexus web：本地网页面板（仅绑定 127.0.0.1）。
@@ -30,7 +31,7 @@ export interface WebOptions {
 
 function json(res: http.ServerResponse, code: number, body: unknown): void {
   const data = JSON.stringify(body);
-  res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' });
+  res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
   res.end(data);
 }
 
@@ -161,7 +162,10 @@ export async function startWebServer(opts: WebOptions): Promise<{ server: http.S
     // mcp.json 由 Files 模块手编，这里负责暴露语法/格式/校验问题
     const mcpIssues = mcpJsonIssues(center, cfg);
     return {
+      version: VERSION,
       center,
+      // 展示用 ~ 缩写路径（完整路径仍在 center 字段，供悬停提示）
+      centerDisplay: center === home ? '~' : center.startsWith(home) ? '~' + center.slice(home.length) : center,
       skills: report.status.skills,
       status: report.status,
       doctor: { issues: report.issues, warnings: report.warnings },
@@ -178,7 +182,8 @@ export async function startWebServer(opts: WebOptions): Promise<{ server: http.S
     const q = new URLSearchParams((req.url ?? '').split('?')[1] ?? '');
     try {
       if (req.method === 'GET' && (url === '/' || url === '/index.html')) {
-        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+        // no-store：本地面板经常重建，避免浏览器缓存住旧版页面
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
         res.end(PAGE_HTML);
         return;
       }

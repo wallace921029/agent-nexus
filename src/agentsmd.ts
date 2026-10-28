@@ -3,7 +3,8 @@ import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { enabledTargets, loadConfig } from './config.js';
 import { ensureLink, inspectLink, loadState, retractLink, saveState, type LinkOutcome, type LinkState } from './link.js';
-import { homeDir, pathExists } from './paths.js';
+import { homeDir } from './paths.js';
+import { probeInstalled } from './detect.js';
 import { renderInstruction } from './render.js';
 import { effectiveTarget, AGENTS_REF_FILE, AGENTS_REF_OLD_LINE, type EffectiveTarget } from './targets.js';
 import type { TargetId } from './targets.js';
@@ -93,13 +94,14 @@ export async function syncAgents(centerRoot: string, opts: SyncOptions = {}): Pr
       continue;
     }
 
-    if (!(await pathExists(t.installDir)) && !opts.force) {
+    // 安装探测（PATH 命令 / 应用位置）作为分发门槛；已安装但目录未建时由 ensureLink 自动创建
+    if (!probeInstalled(t.probe, t.installDir) && !opts.force) {
       rows.push({
         id: def.id,
         label: t.label,
         kind: 'skipped',
         link: t.installDir,
-        detail: 'tool directory not found (treated as not installed), skipped; add --force to distribute anyway',
+        detail: 'tool not detected as installed (no CLI on PATH / app found), skipped; add --force to distribute anyway',
       });
       continue;
     }

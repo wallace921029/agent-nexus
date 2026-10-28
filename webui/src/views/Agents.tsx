@@ -5,6 +5,8 @@ import { listContainerVariants, listItemVariants, sectionVariants } from '../lib
 import { postSyncAgents, postTargetPaths, type Row, type TargetStatus } from '../lib/api';
 import Modal from '../components/Modal';
 import Ic from '../components/Ic';
+import { confirmDialog } from '../components/ui/UiAlertDialog';
+import UninstalledFold from '../components/UninstalledFold';
 import { LOGOS } from '../lib/logos';
 
 /* 设计：卡片直操作（弃用表格+勾选）
@@ -76,7 +78,14 @@ export default function Agents() {
 
   const distributeAll = () =>
     run(async () => {
-      if (!confirm('Distribute AGENTS.md (symlinks) to ALL distributable tools?')) return;
+      if (
+        !(await confirmDialog({
+          title: 'Distribute AGENTS.md to ALL distributable tools?',
+          description: 'AGENTS.md + per-tool overlays are rendered and symlinked into every tool; existing files are auto-backed-up and taken over.',
+          confirmText: 'Distribute all',
+        }))
+      )
+        return;
       const { rows } = await postSyncAgents({});
       rowsToLog(rows);
       await refresh();
@@ -84,7 +93,15 @@ export default function Agents() {
 
   const retractAll = () =>
     run(async () => {
-      if (!confirm('Retract instruction links from ALL tools?')) return;
+      if (
+        !(await confirmDialog({
+          title: 'Retract instruction links from ALL tools?',
+          description: 'Only the links agent-nexus distributed are removed; files in the center are kept.',
+          confirmText: 'Retract all',
+          tone: 'destructive',
+        }))
+      )
+        return;
       const { rows } = await postSyncAgents({ retract: true });
       rowsToLog(rows);
       await refresh();
@@ -92,7 +109,14 @@ export default function Agents() {
 
   const distributeOne = (target: TargetStatus) =>
     run(async () => {
-      if (!confirm(`Distribute AGENTS.md to ${target.eff.label}?`)) return;
+      if (
+        !(await confirmDialog({
+          title: `Distribute AGENTS.md to ${target.eff.label}?`,
+          description: 'An existing file is auto-backed-up and taken over.',
+          confirmText: 'Distribute',
+        }))
+      )
+        return;
       const { rows } = await postSyncAgents({ targets: [target.eff.id] });
       rowsToLog(rows);
       await refresh();
@@ -100,7 +124,14 @@ export default function Agents() {
 
   const retractOne = (target: TargetStatus) =>
     run(async () => {
-      if (!confirm(`Retract the instruction link from ${target.eff.label}?`)) return;
+      if (
+        !(await confirmDialog({
+          title: `Retract the instruction link from ${target.eff.label}?`,
+          confirmText: 'Retract',
+          tone: 'destructive',
+        }))
+      )
+        return;
       const { rows } = await postSyncAgents({ targets: [target.eff.id], retract: true });
       rowsToLog(rows);
       await refresh();
@@ -126,6 +157,75 @@ export default function Agents() {
 
   if (!store.state) return <div className="py-20 text-center text-sub">Loading…</div>;
 
+  const allTargets = store.state.status.targets;
+  // 已安装在前，未安装沉底折叠
+  const installedTargets = allTargets.filter((target) => target.installed);
+  const missingTargets = allTargets.filter((target) => !target.installed);
+
+  function card(target: TargetStatus) {
+    const targetPill = pill(target);
+    const targetHint = hint(target);
+    return (
+      <motion.div
+        layout
+        key={target.eff.id}
+        variants={listItemVariants}
+        whileHover={{ y: -1 }}
+        className="group/card flex items-center gap-3.5 rounded-xl border border-line bg-panel px-4 py-3 transition-colors hover:border-line2"
+      >
+        <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-panel2 p-1.5">
+          <img src={LOGOS[target.eff.id]} className="h-full w-full rounded-sm object-contain" alt="" />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[13px] font-semibold">{target.eff.label}</span>
+            {target.eff.customized ? <span className="rounded bg-accent/12 px-1.5 py-0.5 text-[10px] text-accent">custom path</span> : null}
+            <span className={`rounded-md border px-1.5 py-0.5 text-[10.5px] font-medium ${targetPill.cls}`}>{targetPill.text}</span>
+            {!target.installed ? (
+              <span className="text-[11px] text-sub/60">not installed{target.residual ? ' · config remains' : ''}</span>
+            ) : null}
+          </div>
+          <div className="mt-0.5 truncate font-mono text-[11.5px] text-sub/80" title={target.instrPath}>
+            {target.eff.supports.instructions ? target.instrPath : '—'}
+          </div>
+          {targetHint?.text ? <div className={`mt-1 text-[11px] ${targetHint.cls}`}>{targetHint.text}</div> : null}
+        </div>
+
+        {/* 行内动作：悬停浮现（已分发状态时常显收回） */}
+        <div
+          className={`flex flex-none items-center gap-1.5 opacity-0 transition-opacity group-hover/card:opacity-100 focus-within:opacity-100 ${target.instr === 'ours' || target.instr === 'ours-broken' ? 'opacity-60' : ''}`}
+        >
+          {target.eff.supports.instructions ? (
+            <>
+              <motion.button
+                type="button" whileTap={{ scale: 0.98 }}
+                className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-accent/60 hover:text-accent"
+                disabled={busy}
+                onClick={() => void distributeOne(target)}
+              >
+                {target.instr === 'none' || target.instr === 'ours-broken' ? 'Distribute' : 'Re-distribute'}
+              </motion.button>
+              {target.instr === 'ours' || target.instr === 'copy' || target.instr === 'ours-broken' ? (
+                <motion.button
+                  type="button" whileTap={{ scale: 0.98 }}
+                  className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-err/60 hover:text-err"
+                  disabled={busy}
+                  onClick={() => void retractOne(target)}
+                >
+                  Retract
+                </motion.button>
+              ) : null}
+              <motion.button type="button" whileTap={{ scale: 0.98 }} className="rounded-lg p-1.5 text-sub/60 transition-colors hover:text-accent" title="Custom instruction path" onClick={() => openEdit(target)}>
+                <Ic name="edit" />
+              </motion.button>
+            </>
+          ) : null}
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* 顶栏：标题 + 全局动作 */}
@@ -143,69 +243,12 @@ export default function Agents() {
         </div>
       </motion.div>
 
-      {/* 工具卡片列表（字母序，数据源已排序） */}
+      {/* 工具卡片列表：已安装在前，未安装沉底折叠 */}
       <motion.div className="space-y-2" variants={listContainerVariants} initial="hidden" animate="visible">
-        {store.state.status.targets.map((target) => {
-          const targetPill = pill(target);
-          const targetHint = hint(target);
-          return (
-            <motion.div
-              layout
-              key={target.eff.id}
-              variants={listItemVariants}
-              whileHover={{ y: -1 }}
-              className="group/card flex items-center gap-3.5 rounded-xl border border-line bg-panel px-4 py-3 transition-colors hover:border-line2"
-            >
-              <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-panel2 p-1.5">
-                <img src={LOGOS[target.eff.id]} className="h-full w-full rounded-sm object-contain" alt="" />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[13px] font-semibold">{target.eff.label}</span>
-                  {target.eff.customized ? <span className="rounded bg-accent/12 px-1.5 py-0.5 text-[10px] text-accent">custom path</span> : null}
-                  <span className={`rounded-md border px-1.5 py-0.5 text-[10.5px] font-medium ${targetPill.cls}`}>{targetPill.text}</span>
-                  {!target.installed ? <span className="text-[11px] text-sub/60">not installed</span> : null}
-                </div>
-                <div className="mt-0.5 truncate font-mono text-[11.5px] text-sub/80" title={target.instrPath}>
-                  {target.eff.supports.instructions ? target.instrPath : '—'}
-                </div>
-                {targetHint?.text ? <div className={`mt-1 text-[11px] ${targetHint.cls}`}>{targetHint.text}</div> : null}
-              </div>
-
-              {/* 行内动作：悬停浮现（已分发状态时常显收回） */}
-              <div
-                className={`flex flex-none items-center gap-1.5 opacity-0 transition-opacity group-hover/card:opacity-100 focus-within:opacity-100 ${target.instr === 'ours' || target.instr === 'ours-broken' ? 'opacity-60' : ''}`}
-              >
-                {target.eff.supports.instructions ? (
-                  <>
-                    <motion.button
-                      type="button" whileTap={{ scale: 0.98 }}
-                      className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-accent/60 hover:text-accent"
-                      disabled={busy}
-                      onClick={() => void distributeOne(target)}
-                    >
-                      {target.instr === 'none' || target.instr === 'ours-broken' ? 'Distribute' : 'Re-distribute'}
-                    </motion.button>
-                    {target.instr === 'ours' || target.instr === 'copy' || target.instr === 'ours-broken' ? (
-                      <motion.button
-                        type="button" whileTap={{ scale: 0.98 }}
-                        className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-err/60 hover:text-err"
-                        disabled={busy}
-                        onClick={() => void retractOne(target)}
-                      >
-                        Retract
-                      </motion.button>
-                    ) : null}
-                    <motion.button type="button" whileTap={{ scale: 0.98 }} className="rounded-lg p-1.5 text-sub/60 transition-colors hover:text-accent" title="Custom instruction path" onClick={() => openEdit(target)}>
-                      <Ic name="edit" />
-                    </motion.button>
-                  </>
-                ) : null}
-              </div>
-            </motion.div>
-          );
-        })}
+        {installedTargets.map(card)}
+        {missingTargets.length ? (
+          <UninstalledFold count={missingTargets.length}>{missingTargets.map(card)}</UninstalledFold>
+        ) : null}
       </motion.div>
 
       <AnimatePresence>

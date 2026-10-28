@@ -5,6 +5,8 @@ import { listContainerVariants, listItemVariants, sectionVariants } from '../lib
 import { postLinkSkills, postTargetPaths, type Row, type CellState, type TargetStatus } from '../lib/api';
 import Modal from '../components/Modal';
 import Ic from '../components/Ic';
+import { confirmDialog } from '../components/ui/UiAlertDialog';
+import UninstalledFold from '../components/UninstalledFold';
 import { LOGOS } from '../lib/logos';
 
 /* 设计：主从两栏（同 AGENTS.md 模块的卡片语言）
@@ -51,7 +53,47 @@ export default function Skills() {
   const [editDirValue, setEditDirValue] = useState('');
 
   const targets = store.state?.status.targets ?? [];
-  const current = targets.find((target) => target.eff.id === selected) ?? targets.find((target) => target.eff.supports.skills) ?? targets[0];
+  // 已安装在前，未安装沉底折叠；默认选中优先落在已安装的工具上
+  const installedTargets = targets.filter((target) => target.installed);
+  const missingTargets = targets.filter((target) => !target.installed);
+  const current =
+    targets.find((target) => target.eff.id === selected) ??
+    installedTargets.find((target) => target.eff.supports.skills) ??
+    targets.find((target) => target.eff.supports.skills) ??
+    targets[0];
+
+  function toolButton(target: TargetStatus) {
+    return (
+      <motion.button
+        type="button" whileTap={{ scale: 0.98 }}
+        key={target.eff.id}
+        variants={listItemVariants}
+        whileHover={{ x: 2 }}
+        className={[
+          'flex w-full items-center gap-3.5 rounded-xl border bg-panel px-4 py-3 text-left transition-colors hover:border-line2',
+          current?.eff.id === target.eff.id ? 'row-sel border-accent/50 bg-accent/[0.06]' : 'border-line',
+          !target.eff.supports.skills ? 'opacity-55' : '',
+        ].filter(Boolean).join(' ')}
+        onClick={() => setSelected(target.eff.id)}
+      >
+        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-panel2 p-1.5">
+          <img src={LOGOS[target.eff.id]} className="h-full w-full rounded-sm object-contain" alt="" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-[13px] font-semibold">{target.eff.label}</span>
+            {target.eff.customized ? <span className="rounded bg-accent/12 px-1.5 py-0.5 text-[10px] text-accent">custom dir</span> : null}
+          </div>
+          <div className="mt-0.5 text-[11px] text-sub/75">
+            {target.eff.supports.skills ? `${linkedCount(target)} / ${skills.length} linked` : 'skills not distributable'}
+          </div>
+        </div>
+        {!target.installed ? (
+          <span className="flex-none text-[10.5px] text-sub/60">not installed{target.residual ? ' · config remains' : ''}</span>
+        ) : null}
+      </motion.button>
+    );
+  }
   const skills = store.state?.skills ?? [];
   const cell = (target: string, skill: string): CellState | undefined => store.state?.status.skillsMatrix[target]?.[skill];
   const linkedCount = (target: TargetStatus): number => skills.filter((skill) => cell(target.eff.id, skill) === 'linked').length;
@@ -82,7 +124,14 @@ export default function Skills() {
   const distributeTool = (target: TargetStatus) =>
     run(async () => {
       if (!skills.length) return;
-      if (!confirm(`Distribute ALL skills to ${target.eff.label}?`)) return;
+      if (
+        !(await confirmDialog({
+          title: `Distribute ALL skills to ${target.eff.label}?`,
+          description: 'Every center skill is symlinked into this tool; foreign entries are never touched.',
+          confirmText: 'Distribute all',
+        }))
+      )
+        return;
       const { rows } = await postLinkSkills({ skills: [...skills], targets: [target.eff.id] });
       rowsToLog(rows);
       await refresh();
@@ -91,7 +140,14 @@ export default function Skills() {
   const retractTool = (target: TargetStatus) =>
     run(async () => {
       if (!skills.length) return;
-      if (!confirm(`Retract ALL skill links from ${target.eff.label}?`)) return;
+      if (
+        !(await confirmDialog({
+          title: `Retract ALL skill links from ${target.eff.label}?`,
+          confirmText: 'Retract all',
+          tone: 'destructive',
+        }))
+      )
+        return;
       const { rows } = await postLinkSkills({ skills: [...skills], targets: [target.eff.id], retract: true });
       rowsToLog(rows);
       await refresh();
@@ -128,36 +184,12 @@ export default function Skills() {
 
       {/* 主从两栏：左列工具卡与右侧面板各自独立（v2 分离版式） */}
       <div className="grid items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-        {/* 左：工具纵向列表 */}
+        {/* 左：工具纵向列表（已安装在前，未安装沉底折叠） */}
         <motion.div className="space-y-2" variants={listContainerVariants} initial="hidden" animate="visible">
-          {targets.map((target) => (
-            <motion.button
-              type="button" whileTap={{ scale: 0.98 }}
-              key={target.eff.id}
-              variants={listItemVariants}
-              whileHover={{ x: 2 }}
-              className={[
-                'flex w-full items-center gap-3.5 rounded-xl border bg-panel px-4 py-3 text-left transition-colors hover:border-line2',
-                current?.eff.id === target.eff.id ? 'row-sel border-accent/50 bg-accent/[0.06]' : 'border-line',
-                !target.eff.supports.skills ? 'opacity-55' : '',
-              ].filter(Boolean).join(' ')}
-              onClick={() => setSelected(target.eff.id)}
-            >
-              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-panel2 p-1.5">
-                <img src={LOGOS[target.eff.id]} className="h-full w-full rounded-sm object-contain" alt="" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-[13px] font-semibold">{target.eff.label}</span>
-                  {target.eff.customized ? <span className="rounded bg-accent/12 px-1.5 py-0.5 text-[10px] text-accent">custom dir</span> : null}
-                </div>
-                <div className="mt-0.5 text-[11px] text-sub/75">
-                  {target.eff.supports.skills ? `${linkedCount(target)} / ${skills.length} linked` : 'skills not distributable'}
-                </div>
-              </div>
-              {!target.installed ? <span className="flex-none text-[10.5px] text-sub/60">not installed</span> : null}
-            </motion.button>
-          ))}
+          {installedTargets.map(toolButton)}
+          {missingTargets.length ? (
+            <UninstalledFold count={missingTargets.length}>{missingTargets.map(toolButton)}</UninstalledFold>
+          ) : null}
         </motion.div>
 
         {/* 右：选中工具的技能面板 */}

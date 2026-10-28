@@ -10,8 +10,7 @@ import { collectStatus, runDoctor } from './status.js';
 import { initCenter } from './init.js';
 import { TARGET_IDS, type TargetId } from './targets.js';
 import { startWebServer } from './web.js';
-
-const VERSION = '0.2.0';
+import { VERSION } from './version.js';
 
 const MARK: Record<string, string> = {
   linked: '✓ linked',

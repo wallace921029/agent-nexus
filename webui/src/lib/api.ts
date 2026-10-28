@@ -17,6 +17,8 @@ export interface EffectiveTarget {
 export interface TargetStatus {
   eff: EffectiveTarget;
   installed: boolean;
+  /** 未安装但配置目录残留（卸载遗留，可能含历史下发的链接/文件） */
+  residual: boolean;
   skillsLinked: number;
   skillsBroken: number;
   skillsForeign: number;
@@ -28,7 +30,11 @@ export interface TargetStatus {
 export type CellState = 'linked' | 'broken' | 'foreign' | 'none' | 'unsupported';
 
 export interface NexusState {
+  /** 后端 agent-nexus 版本（页脚展示） */
+  version: string;
   center: string;
+  /** 展示用 ~ 缩写路径（如 ~/.agent-nexus）；center 在 home 之外时与 center 相同 */
+  centerDisplay: string;
   skills: string[];
   status: {
     targets: TargetStatus[];

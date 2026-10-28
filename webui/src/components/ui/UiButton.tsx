@@ -1,9 +1,10 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, Ref } from 'react';
 
 // shadcn/ui 风格 Button 的 React 适配（default 使用前景/背景反色；accent 为主色实心 CTA）
 interface UiButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'accent' | 'secondary' | 'outline' | 'ghost' | 'destructive';
   size?: 'sm' | 'default' | 'icon';
+  ref?: Ref<HTMLButtonElement>;
 }
 
 const variants = {
@@ -21,9 +22,10 @@ const sizes = {
   icon: 'h-8 w-8',
 };
 
-export default function UiButton({ variant = 'default', size = 'default', className, type = 'button', ...props }: UiButtonProps) {
+export default function UiButton({ variant = 'default', size = 'default', className, type = 'button', ref, ...props }: UiButtonProps) {
   return (
     <button
+      ref={ref}
       type={type}
       className={[
         'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg text-[12.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/60 disabled:pointer-events-none disabled:opacity-50',

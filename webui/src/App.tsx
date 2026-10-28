@@ -4,6 +4,7 @@ import { refresh, setView, useStore, type StoreState, type View } from './lib/st
 import { toggleTheme, useTheme } from './lib/theme';
 import { listItemVariants, pageVariants } from './lib/animation';
 import Ic, { type IconName } from './components/Ic';
+import { ConfirmHost } from './components/ui/UiAlertDialog';
 import logo from './assets/logo.svg';
 import Dashboard from './views/Dashboard';
 import Agents from './views/Agents';
@@ -100,35 +101,51 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="space-y-2 border-t border-line px-4 py-3">
-          <div className="flex items-center gap-2 text-[12px]">
+        <div className="space-y-2.5 border-t border-line px-4 py-3">
+          {/* 状态行：点击跳 Overview 查看健康详情 */}
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.98 }}
+            className="flex w-full items-center gap-2 text-left text-[12px] transition-colors hover:text-fg"
+            title="Open Overview for health details"
+            onClick={() => setView('dashboard')}
+          >
             <span className={`dot dot-${doctorTone}`} />
             <span className="text-sub">{doctorText}</span>
-          </div>
-          <div className="truncate font-mono text-[11px] text-sub/80" title={store.state?.center}>
-            {store.state?.center}
-          </div>
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.98 }}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-panel2 px-3 py-1.5 text-[12px] text-sub transition-colors hover:border-accent/50 hover:text-fg"
-            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            onClick={toggleTheme}
-          >
-            <Ic name={theme === 'dark' ? 'sun' : 'moon'} />
-            {theme === 'dark' ? 'Light theme' : 'Dark theme'}
           </motion.button>
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.98 }}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-panel2 px-3 py-1.5 text-[12px] text-sub transition-colors hover:border-accent/50 hover:text-fg"
-            disabled={store.loading}
-            onClick={() => void refresh()}
-          >
-            <Ic name="refresh" className={store.loading ? 'animate-spin' : ''} />
-            Refresh
-          </motion.button>
+          {/* 中心路径：~ 缩写，悬停显示完整路径 */}
+          <div className="truncate font-mono text-[11px] text-sub/70" title={store.state?.center}>
+            {store.state?.centerDisplay ?? store.state?.center}
+          </div>
+          {/* 图标工具行 + 版本号 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.9 }}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-sub/80 transition-colors hover:bg-panel2 hover:text-fg"
+                aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                title={theme === 'dark' ? 'Light theme' : 'Dark theme'}
+                onClick={toggleTheme}
+              >
+                <Ic name={theme === 'dark' ? 'sun' : 'moon'} />
+              </motion.button>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.9 }}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-sub/80 transition-colors hover:bg-panel2 hover:text-fg disabled:pointer-events-none disabled:opacity-50"
+                aria-label="Refresh panel data"
+                title="Refresh"
+                disabled={store.loading}
+                onClick={() => void refresh()}
+              >
+                <Ic name="refresh" className={store.loading ? 'animate-spin' : ''} />
+              </motion.button>
+            </div>
+            <span className="font-mono text-[10.5px] text-sub/60">
+              {store.state?.version ? `v${store.state.version}` : ''}
+            </span>
+          </div>
         </div>
       </motion.aside>
 
@@ -148,6 +165,8 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      <ConfirmHost />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { listContainerVariants, listItemVariants, sectionVariants } from '../lib
 import type { TargetStatus } from '../lib/api';
 import { LOGOS } from '../lib/logos';
 import Ic, { type IconName } from '../components/Ic';
+import UninstalledFold from '../components/UninstalledFold';
 
 /* 纯统计页：只展示状态与模块入口，不做任何分发/收回操作（操作去各自的模块） */
 
@@ -75,6 +76,62 @@ export default function Dashboard() {
   }
 
   const targets = state.status.targets;
+  // 已安装在前，未安装沉底折叠
+  const installedTargets = targets.filter((target) => target.installed);
+  const missingTargets = targets.filter((target) => !target.installed);
+
+  function agentRow(target: TargetStatus) {
+    return (
+      <motion.button
+        type="button"
+        key={target.eff.id}
+        variants={listItemVariants}
+        whileHover={{ x: 2 }}
+        className="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-panel2/65 lg:grid-cols-[minmax(150px,1.15fr)_minmax(145px,1fr)_minmax(115px,0.8fr)_24px] lg:gap-4 lg:px-5"
+        aria-label={`View ${target.eff.label} instruction details`}
+        onClick={() => setView('agents')}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-line/70 bg-panel2">
+            <img src={LOGOS[target.eff.id]} className="h-5 w-5 rounded-sm object-contain" alt="" />
+          </span>
+          <span className="min-w-0">
+            <span className="flex items-center gap-2">
+              <span className="truncate text-[12.5px] font-medium">{target.eff.label}</span>
+              {target.eff.customized ? <span className="flex-none rounded bg-accent/10 px-1.5 py-0.5 text-[9px] text-accent">Custom</span> : null}
+            </span>
+                    <span className={`mt-0.5 block text-[10.5px] ${target.installed ? 'text-sub/65' : 'text-warn/85'}`}>
+                      {target.installed ? 'Available' : target.residual ? 'Not installed (config remains)' : 'Not installed'}
+                    </span>
+            <span className="mt-1 flex items-center gap-1.5 text-[10px] text-sub lg:hidden">
+              <span>{instrMeta[target.instr].label}</span><span className="text-sub/35">·</span><span>{target.eff.supports.skills ? `${target.skillsLinked}/${target.skillsTotal} skills` : 'No skills'}</span>
+            </span>
+          </span>
+        </span>
+
+        <span className="hidden items-center gap-2 text-[11.5px] text-sub lg:flex" title={target.instrPath}>
+          <span className={`dot ${instrMeta[target.instr].dot}`}></span>
+          <span className="truncate">{instrMeta[target.instr].label}</span>
+        </span>
+
+        {target.eff.supports.skills ? (
+          <span className="hidden lg:block">
+            <span className="flex items-center justify-between gap-2 text-[10.5px]">
+              <span className="text-fg">{target.skillsLinked}<span className="text-sub/60"> / {target.skillsTotal}</span></span>
+              {target.skillsBroken ? <span className="text-err">{target.skillsBroken} broken</span> : <span className="text-sub/55">{skillPercent(target)}%</span>}
+            </span>
+            <span className="mt-2 block h-1 overflow-hidden rounded-full bg-line">
+              <span className={`block h-full rounded-full transition-[width] ${target.skillsBroken ? 'bg-err' : 'bg-accent'}`} style={{ width: `${skillPercent(target)}%` }}></span>
+            </span>
+          </span>
+        ) : <span className="hidden text-[11px] text-sub/50 lg:block">Not supported</span>}
+
+        <span className="flex h-7 w-7 items-center justify-center justify-self-end rounded-lg text-sub/45 transition-all group-hover:bg-accent/10 group-hover:translate-x-0.5 group-hover:text-accent">
+          <Ic name="chevron" />
+        </span>
+      </motion.button>
+    );
+  }
   const issueCount = state.doctor.issues.length;
   const warningCount = state.doctor.warnings.length;
   const attentionCount = issueCount + warningCount;
@@ -231,54 +288,10 @@ export default function Dashboard() {
           </div>
 
           <motion.div className="divide-y divide-line/60" variants={listContainerVariants} initial="hidden" animate="visible">
-            {targets.map((target) => (
-              <motion.button
-                type="button"
-                key={target.eff.id}
-                variants={listItemVariants}
-                whileHover={{ x: 2 }}
-                className="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-panel2/65 lg:grid-cols-[minmax(150px,1.15fr)_minmax(145px,1fr)_minmax(115px,0.8fr)_24px] lg:gap-4 lg:px-5"
-                aria-label={`View ${target.eff.label} instruction details`}
-                onClick={() => setView('agents')}
-              >
-                <span className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-line/70 bg-panel2">
-                    <img src={LOGOS[target.eff.id]} className="h-5 w-5 rounded-sm object-contain" alt="" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-2">
-                      <span className="truncate text-[12.5px] font-medium">{target.eff.label}</span>
-                      {target.eff.customized ? <span className="flex-none rounded bg-accent/10 px-1.5 py-0.5 text-[9px] text-accent">Custom</span> : null}
-                    </span>
-                    <span className={`mt-0.5 block text-[10.5px] ${target.installed ? 'text-sub/65' : 'text-warn/85'}`}>{target.installed ? 'Available' : 'Not installed'}</span>
-                    <span className="mt-1 flex items-center gap-1.5 text-[10px] text-sub lg:hidden">
-                      <span>{instrMeta[target.instr].label}</span><span className="text-sub/35">·</span><span>{target.eff.supports.skills ? `${target.skillsLinked}/${target.skillsTotal} skills` : 'No skills'}</span>
-                    </span>
-                  </span>
-                </span>
-
-                <span className="hidden items-center gap-2 text-[11.5px] text-sub lg:flex" title={target.instrPath}>
-                  <span className={`dot ${instrMeta[target.instr].dot}`}></span>
-                  <span className="truncate">{instrMeta[target.instr].label}</span>
-                </span>
-
-                {target.eff.supports.skills ? (
-                  <span className="hidden lg:block">
-                    <span className="flex items-center justify-between gap-2 text-[10.5px]">
-                      <span className="text-fg">{target.skillsLinked}<span className="text-sub/60"> / {target.skillsTotal}</span></span>
-                      {target.skillsBroken ? <span className="text-err">{target.skillsBroken} broken</span> : <span className="text-sub/55">{skillPercent(target)}%</span>}
-                    </span>
-                    <span className="mt-2 block h-1 overflow-hidden rounded-full bg-line">
-                      <span className={`block h-full rounded-full transition-[width] ${target.skillsBroken ? 'bg-err' : 'bg-accent'}`} style={{ width: `${skillPercent(target)}%` }}></span>
-                    </span>
-                  </span>
-                ) : <span className="hidden text-[11px] text-sub/50 lg:block">Not supported</span>}
-
-                <span className="flex h-7 w-7 items-center justify-center justify-self-end rounded-lg text-sub/45 transition-all group-hover:bg-accent/10 group-hover:translate-x-0.5 group-hover:text-accent">
-                  <Ic name="chevron" />
-                </span>
-              </motion.button>
-            ))}
+            {installedTargets.map(agentRow)}
+            {missingTargets.length ? (
+              <UninstalledFold variant="row" count={missingTargets.length}>{missingTargets.map(agentRow)}</UninstalledFold>
+            ) : null}
           </motion.div>
           <footer className="border-t border-line px-5 py-3 text-[10.5px] text-sub/60">Select an agent to review its instruction settings.</footer>
         </section>

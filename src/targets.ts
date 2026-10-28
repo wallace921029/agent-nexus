@@ -37,11 +37,24 @@ export const AGENTS_REF_REF_FILE = 'CLAUDE.md';
 /** 旧版相对引用行，仅用于识别/迁移已创建的引用文件 */
 export const AGENTS_REF_OLD_LINE = '@./AGENTS.md';
 
+/** “已安装”探测声明：命中任一探测点即视为已安装；
+    未声明（或当前平台没有候选）时回退为 installDir 存在性判断 */
+export interface InstallProbe {
+  /** 在 PATH 及常见 bin 目录（~/.local/bin、brew、%APPDATA%\npm 等）上查找的命令名（Windows 自动尝试 .exe/.cmd/.bat 后缀） */
+  commands?: string[];
+  /** macOS 桌面应用安装位置（绝对路径；支持 ~，用户级与系统级 /Applications 建议都声明） */
+  macApps?: string[];
+  /** Windows 安装位置（支持 %LOCALAPPDATA% 等环境变量展开与 ~ 前缀） */
+  winPaths?: string[];
+}
+
 export interface TargetDef {
   id: TargetId;
   label: string;
   /** 该工具“已安装”的判定目录（相对家目录） */
   installDir: string;
+  /** “已安装”探测声明（PATH 命令 / 应用安装位置）；缺省时仅按 installDir 存在性判断 */
+  probe?: InstallProbe;
   /** 用户级 skills 目录（相对家目录） */
   skillsRel: string;
   /** 全局指令落点 */
@@ -58,6 +71,7 @@ export const TARGETS: readonly TargetDef[] = [
     id: 'claude',
     label: 'Claude Code',
     installDir: '.claude',
+    probe: { commands: ['claude'] },
     skillsRel: '.claude/skills',
     instr: { rel: '.claude', kind: 'agentsRef' },
     mcpConfig: '.claude.json',
@@ -75,6 +89,11 @@ export const TARGETS: readonly TargetDef[] = [
         : process.platform === 'win32'
           ? 'AppData/Roaming/Claude'
           : '.config/Claude',
+    // Linux 无官方桌面版：平台无候选时自动回退目录存在性判断；macOS 系统级 + 用户级安装位置都查
+    probe: {
+      macApps: ['/Applications/Claude.app', '~/Applications/Claude.app'],
+      winPaths: ['%LOCALAPPDATA%\\AnthropicClaude'],
+    },
     skillsRel: '',
     instr: { rel: '', kind: 'agentsRef' },
     mcpConfig:
@@ -94,6 +113,7 @@ export const TARGETS: readonly TargetDef[] = [
     id: 'codex',
     label: 'Codex',
     installDir: '.codex',
+    probe: { commands: ['codex'] },
     skillsRel: '.agents/skills',
     instr: { rel: '.codex/AGENTS.md', kind: 'file' },
     mcpConfig: '.codex/config.toml',
@@ -108,6 +128,7 @@ export const TARGETS: readonly TargetDef[] = [
     id: 'copilot',
     label: 'Copilot',
     installDir: '.copilot',
+    probe: { commands: ['copilot'] },
     skillsRel: '.copilot/skills',
     instr: { rel: '.copilot/copilot-instructions.md', kind: 'file' },
     mcpConfig: '.copilot/mcp-config.json',
@@ -120,6 +141,7 @@ export const TARGETS: readonly TargetDef[] = [
     id: 'opencode',
     label: 'OpenCode',
     installDir: '.config/opencode',
+    probe: { commands: ['opencode'] },
     skillsRel: '.config/opencode/skills',
     instr: { rel: '.config/opencode/AGENTS.md', kind: 'file' },
     mcpConfig: '.config/opencode/opencode.json',
@@ -129,6 +151,7 @@ export const TARGETS: readonly TargetDef[] = [
     id: 'dsh',
     label: 'DeepSeek Harness',
     installDir: '.dsh',
+    probe: { commands: ['dsh'] },
     skillsRel: '.dsh/skills',
     instr: { rel: '.dsh/AGENTS.md', kind: 'file' },
     mcpConfig: '.dsh/cordis.patch.yml',
@@ -142,6 +165,13 @@ export const TARGETS: readonly TargetDef[] = [
     id: 'antigravity',
     label: 'Antigravity',
     installDir: '.gemini',
+    // gemini CLI 与 Antigravity 共读 ~/.gemini/config，任一存在即视为该行有效；
+    // Windows 应用位置按 Electron 应用惯例（%LOCALAPPDATA%\Programs）尽力探测
+    probe: {
+      commands: ['antigravity', 'gemini'],
+      macApps: ['/Applications/Antigravity.app', '~/Applications/Antigravity.app'],
+      winPaths: ['%LOCALAPPDATA%\\Programs\\Antigravity'],
+    },
     skillsRel: '.gemini/config/skills',
     instr: { rel: '.gemini/config/AGENTS.md', kind: 'file' },
     mcpConfig: '.gemini/config/mcp_config.json',
@@ -155,6 +185,7 @@ export const TARGETS: readonly TargetDef[] = [
     id: 'zcode',
     label: 'ZCode',
     installDir: '.zcode',
+    probe: { commands: ['zcode'] },
     skillsRel: '.zcode/skills',
     instr: { rel: '.zcode/AGENTS.md', kind: 'file' },
     mcpConfig: '.zcode/cli/config.json',
@@ -187,6 +218,8 @@ export interface EffectiveTarget {
   notes?: string[];
   /** 该工具“已安装”的判定目录（绝对路径） */
   installDir: string;
+  /** “已安装”探测声明（原样来自 TargetDef） */
+  probe?: InstallProbe;
   /** 用户级 skills 目录（绝对路径；不支持 skills 时为空串） */
   skillsDir: string;
   instr: {
@@ -256,6 +289,7 @@ export function effectiveTarget(home: string, def: TargetDef, ov?: TargetPathOve
     label: def.label,
     notes: def.notes,
     installDir: path.join(home, ...def.installDir.split('/')),
+    probe: def.probe,
     skillsDir: supports.skills ? resolveUserPath(home, skillsRel) : '',
     instr: supports.instructions
       ? {

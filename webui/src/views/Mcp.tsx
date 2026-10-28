@@ -213,7 +213,7 @@ export default function Mcp() {
                   {isDefaultRow(row.id) ? (
                     <span className="rounded border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent/90">all tools</span>
                   ) : row.target && !row.target.installed ? (
-                    <span className="text-[11px] text-sub/60">not installed</span>
+                    <span className="text-[11px] text-sub/60">not installed{row.target.residual ? ' · config remains' : ''}</span>
                   ) : null}
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-sub/70">

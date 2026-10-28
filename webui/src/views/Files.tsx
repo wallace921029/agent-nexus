@@ -6,6 +6,7 @@ import { fsList, fsRead, fsWrite, fsSearch, type FsEntry } from '../lib/api';
 import Ic from '../components/Ic';
 import Modal from '../components/Modal';
 import CodeEditor from '../components/CodeEditor';
+import { confirmDialog } from '../components/ui/UiAlertDialog';
 
 /** 目录树节点：children 懒加载（首次展开时拉取） */
 interface TreeNode {
@@ -111,7 +112,17 @@ export default function Files() {
   const pathParts = { dir: separator >= 0 ? rel.slice(0, separator + 1) : '', name: separator >= 0 ? rel.slice(separator + 1) : rel };
 
   async function openFile(path: string): Promise<void> {
-    if (dirtyRef.current && !confirm('This file has unsaved changes that will be lost. Continue?')) return;
+    if (
+      dirtyRef.current &&
+      !(await confirmDialog({
+        title: 'Discard unsaved changes?',
+        description: 'This file has unsaved changes that will be lost.',
+        confirmText: 'Discard & continue',
+        cancelText: 'Keep editing',
+        tone: 'destructive',
+      }))
+    )
+      return;
     setOpenRel(path);
     setOriginal('');
     setDraft('');

@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { enabledTargets, loadConfig } from './config.js';
 import { ensureLink, inspectLink, loadState, retractLink, saveState, type LinkOutcome } from './link.js';
 import { homeDir } from './paths.js';
+import { probeInstalled } from './detect.js';
 import { effectiveTarget } from './targets.js';
 import type { TargetId } from './targets.js';
 
@@ -50,13 +51,13 @@ export async function applySkills(centerRoot: string, opts: SkillsOptions = {}):
     const wanted = opts.skills ?? [];
     for (const def of actionable) {
       const t = effectiveTarget(home, def, cfg.targets[def.id]);
-      if (!fs.existsSync(t.installDir) && !opts.force) {
+      if (!probeInstalled(t.probe, t.installDir) && !opts.force) {
         rows.push({
           id: def.id,
           skill: '-',
           kind: 'skipped',
           link: t.installDir,
-          detail: 'tool directory not found (treated as not installed), skipped; add --force to retract anyway',
+          detail: 'tool not detected as installed (no CLI on PATH / app found), skipped; add --force to retract anyway',
         });
         continue;
       }
@@ -107,13 +108,13 @@ export async function applySkills(centerRoot: string, opts: SkillsOptions = {}):
 
   for (const def of actionable) {
     const t = effectiveTarget(home, def, cfg.targets[def.id]);
-    if (!fs.existsSync(t.installDir) && !opts.force) {
+    if (!probeInstalled(t.probe, t.installDir) && !opts.force) {
       rows.push({
         id: def.id,
         skill: '-',
         kind: 'skipped',
         link: t.installDir,
-        detail: 'tool directory not found (treated as not installed), skipped; add --force to link anyway',
+        detail: 'tool not detected as installed (no CLI on PATH / app found), skipped; add --force to link anyway',
       });
       continue;
     }

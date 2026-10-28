@@ -9,6 +9,7 @@ import { baseMdPath } from './render.js';
 import { listSkills } from './skills.js';
 import { effectiveTarget } from './targets.js';
 import type { EffectiveTarget } from './targets.js';
+import { probeInstalled } from './detect.js';
 
 export type InstrState = 'none' | 'ours' | 'ours-broken' | 'copy' | 'foreign' | 'unsupported';
 export type SkillCellState = 'linked' | 'broken' | 'foreign' | 'none' | 'unsupported';
@@ -16,6 +17,8 @@ export type SkillCellState = 'linked' | 'broken' | 'foreign' | 'none' | 'unsuppo
 export interface TargetStatus {
   eff: EffectiveTarget;
   installed: boolean;
+  /** 未安装但配置目录残留（卸载遗留，可能含历史下发的链接/文件） */
+  residual: boolean;
   skillsLinked: number;
   skillsBroken: number;
   skillsForeign: number;
@@ -62,7 +65,9 @@ export async function collectStatus(centerRoot: string): Promise<CenterStatus> {
   const skillsMatrix: Record<string, Record<string, SkillCellState>> = {};
   for (const def of enabledTargets(cfg)) {
     const eff = effectiveTarget(home, def, cfg.targets[def.id]);
-    const installed = fs.existsSync(eff.installDir);
+    // 探测优先（PATH 命令 / 应用位置）；目录仅在“探测未装但目录仍在”时作为残留状态展示
+    const installed = probeInstalled(def.probe, eff.installDir);
+    const residual = !installed && fs.existsSync(eff.installDir);
 
     let linked = 0;
     let broken = 0;
@@ -103,6 +108,7 @@ export async function collectStatus(centerRoot: string): Promise<CenterStatus> {
     targets.push({
       eff,
       installed,
+      residual,
       skillsLinked: linked,
       skillsBroken: broken,
       skillsForeign: foreign,
@@ -145,7 +151,9 @@ export async function runDoctor(centerRoot: string, opts: { probeCodex?: boolean
       warnings.push(`[${t.eff.id}] ${t.skillsForeign} foreign entries with colliding names in skills dir, skipped`);
     }
     if (!t.installed && t.eff.supports.instructions) {
-      warnings.push(`[${t.eff.id}] install dir ${t.eff.installDir} not found; treated as not installed, distribution skipped`);
+      warnings.push(
+        `[${t.eff.id}] not detected as installed (no command on PATH / app location found)${t.residual ? `; residual config dir ${t.eff.installDir} left in place` : ''}; distribution skipped`,
+      );
     }
   }
 
