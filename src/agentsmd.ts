@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { enabledTargets, loadConfig } from './config.js';
 import { ensureLink, inspectLink, loadState, retractLink, saveState, type LinkOutcome, type LinkState } from './link.js';
 import { homeDir } from './paths.js';
-import { probeInstalled } from './detect.js';
+import { distributableTarget } from './detect.js';
 import { renderInstruction } from './render.js';
 import { effectiveTarget, AGENTS_REF_FILE, AGENTS_REF_OLD_LINE, type EffectiveTarget } from './targets.js';
 import type { TargetId } from './targets.js';
@@ -94,14 +94,14 @@ export async function syncAgents(centerRoot: string, opts: SyncOptions = {}): Pr
       continue;
     }
 
-    // 安装探测（PATH 命令 / 应用位置）作为分发门槛；已安装但目录未建时由 ensureLink 自动创建
-    if (!probeInstalled(t.probe, t.installDir) && !opts.force) {
+    // 分发门槛：探测不到已安装且配置目录也不存在才跳过（残留目录 = 可操作，npx 按需启动的工具目录是活的）
+    if (!distributableTarget(t.probe, t.installDir) && !opts.force) {
       rows.push({
         id: def.id,
         label: t.label,
         kind: 'skipped',
         link: t.installDir,
-        detail: 'tool not detected as installed (no CLI on PATH / app found), skipped; add --force to distribute anyway',
+        detail: 'tool not detected as installed (no CLI on PATH / app found, no config dir), skipped; add --force to distribute anyway',
       });
       continue;
     }

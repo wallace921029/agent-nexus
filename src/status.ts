@@ -74,8 +74,9 @@ export async function collectStatus(centerRoot: string): Promise<CenterStatus> {
     let foreign = 0;
     const matrix: Record<string, SkillCellState> = {};
     for (const s of skills) matrix[s] = eff.supports.skills ? 'none' : 'unsupported';
-    if (installed && eff.supports.skills) {
-      // 从目标目录一侧枚举，这样中心里已删除的 skill 留下的断链也能被发现
+    if ((installed || residual) && eff.supports.skills) {
+      // 从目标目录一侧枚举，这样中心里已删除的 skill 留下的断链也能被发现；
+      // 残留态（目录在）同样枚举 —— 派发/收回对它开放，链接状态必须如实展示
       let entries: fs.Dirent[] = [];
       try {
         entries = fs.readdirSync(eff.skillsDir, { withFileTypes: true });
@@ -151,8 +152,11 @@ export async function runDoctor(centerRoot: string, opts: { probeCodex?: boolean
       warnings.push(`[${t.eff.id}] ${t.skillsForeign} foreign entries with colliding names in skills dir, skipped`);
     }
     if (!t.installed && t.eff.supports.instructions) {
+      // 残留目录 = 工具可能是 npx 按需启动形态，目录仍被读取 → 可分发；完全无痕才真正跳过
       warnings.push(
-        `[${t.eff.id}] not detected as installed (no command on PATH / app location found)${t.residual ? `; residual config dir ${t.eff.installDir} left in place` : ''}; distribution skipped`,
+        t.residual
+          ? `[${t.eff.id}] not detected as installed (no command on PATH / app location found); residual config dir ${t.eff.installDir} kept — distribution still allowed while the dir exists`
+          : `[${t.eff.id}] not detected as installed (no command on PATH / app location found, no config dir); distribution skipped (--force to override)`,
       );
     }
   }

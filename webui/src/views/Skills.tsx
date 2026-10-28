@@ -217,7 +217,7 @@ export default function Skills() {
                   <motion.button
                     type="button" whileTap={{ scale: 0.98 }}
                     className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-accent/60 hover:text-accent"
-                    disabled={busy || !skills.length || !current.installed}
+                    disabled={busy || !skills.length || (!current.installed && !current.residual)}
                     onClick={() => void distributeTool(current)}
                   >
                     Distribute all
@@ -225,7 +225,7 @@ export default function Skills() {
                   <motion.button
                     type="button" whileTap={{ scale: 0.98 }}
                     className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-err/60 hover:text-err"
-                    disabled={busy || !skills.length || !current.installed}
+                    disabled={busy || !skills.length || (!current.installed && !current.residual)}
                     onClick={() => void retractTool(current)}
                   >
                     Retract all
