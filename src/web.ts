@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { parse as parseJsonc, type ParseError } from 'jsonc-parser';
 import { syncAgents } from './agentsmd.js';
 import { loadConfig, mcpJsonIssues, updateMcpProfile, updateTargetSettings, enabledTargets, type NexusConfig } from './config.js';
 import { PAGE_HTML } from './page.js';
@@ -120,19 +121,13 @@ function detectNexusMcp(cfg: NexusConfig): Record<string, string[]> {
     }
     let raw: any;
     if (def.id === 'opencode') {
-      const txt = fs
-        .readFileSync(p, 'utf8')
-        .replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '')
-        .replace(/,(\s*[}\]])/g, '$1');
-      try {
-        raw = JSON.parse(txt);
-      } catch {
-        raw = null;
-      }
+      const errors: ParseError[] = [];
+      raw = parseJsonc(fs.readFileSync(p, 'utf8'), errors, { allowTrailingComma: true });
+      if (errors.length) raw = null;
     } else {
       raw = readJson(p);
     }
-    out[def.id] = keys(def.id === 'zcode' ? raw?.mcp?.servers : def.id === 'opencode' ? raw?.mcp : raw?.mcpServers);
+    out[def.id] = keys(def.id === 'zcode' || def.id === 'opencode' ? raw?.mcp?.servers : raw?.mcpServers);
   }
   return out;
 }

@@ -1,6 +1,6 @@
 {
   "name": "@wallace921029/agent-nexus",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "多 Agent 工具统一配置中心：AGENTS.md 渲染下发、skills 链接矩阵、MCP 聚合代理",
   "license": "MIT",
   "repository": {
@@ -23,14 +23,15 @@
     "build": "tsc -p tsconfig.json",
     "build:web": "npm --prefix webui run build && node scripts/embed-webui.mjs",
     "build:all": "npm run build:web && npm run build",
-    "prepublishOnly": "npm --prefix webui install && npm run build:all && node test/mcp-e2e.mjs",
+    "prepublishOnly": "npm --prefix webui install && npm run build:all && npm test",
     "dev": "tsc -p tsconfig.json --watch",
     "dev:web": "node scripts/dev.mjs",
-    "test": "node test/mcp-e2e.mjs"
+    "test": "node test/opencode-config.mjs && node test/mcp-e2e.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "commander": "^12.1.0"
+    "commander": "^12.1.0",
+    "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

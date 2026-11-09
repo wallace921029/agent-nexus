@@ -82,8 +82,8 @@ export function buildSnippets(opts: SnippetOptions): ToolSnippet[] {
     label: 'OpenCode',
     file: file('opencode', '~/.config/opencode/opencode.json(c)'),
     kind: 'json',
-    content: j({ mcp: { [name]: { type: 'local', command: argv, environment: {} } } }),
-    note: 'command is an array (full command line); merge into the existing mcp section',
+    content: j({ $schema: 'https://opencode.ai/config.json', mcp: { servers: { [name]: { type: 'local', command: argv, environment: {} } } } }),
+    note: 'OpenCode V2: merge the server into mcp.servers; keep an existing $schema if present.',
   });
 
   snippets.push({
