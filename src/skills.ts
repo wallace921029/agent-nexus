@@ -39,17 +39,11 @@ export async function applySkills(centerRoot: string, opts: SkillsOptions = {}):
   const rows: SkillsRow[] = [];
   const defs = enabledTargets(cfg).filter((t) => !opts.targets?.length || opts.targets!.includes(t.id));
 
-  // 不支持 skills 的目标（如 Claude Desktop）直接说明并跳过
-  const actionable = defs.filter((d) => effectiveTarget(home, d, cfg.targets[d.id]).supports.skills);
-  const skippedUnsupported = defs
-    .filter((d) => !actionable.includes(d))
-    .map((d) => ({ id: d.id, skill: '-', kind: 'skipped' as const, link: '', detail: 'not distributable for this tool (see notes)' }));
-
   if (opts.retract) {
     // 收回不依赖中心清单：从目标目录一侧枚举我们的链接，
     // 这样中心里已删除的 skill 留下的悬空链接也能收回
     const wanted = opts.skills ?? [];
-    for (const def of actionable) {
+    for (const def of defs) {
       const t = effectiveTarget(home, def, cfg.targets[def.id]);
       if (!distributableTarget(t.probe, t.installDir) && !opts.force) {
         rows.push({
@@ -81,7 +75,6 @@ export async function applySkills(centerRoot: string, opts: SkillsOptions = {}):
         rows.push({ id: def.id, skill: '-', kind: 'skipped', link: t.skillsDir, detail: 'no links to retract' });
       }
     }
-    rows.push(...skippedUnsupported);
     if (!opts.dryRun) saveState(centerRoot, state);
     return rows;
   }
@@ -106,7 +99,7 @@ export async function applySkills(centerRoot: string, opts: SkillsOptions = {}):
     }
   }
 
-  for (const def of actionable) {
+  for (const def of defs) {
     const t = effectiveTarget(home, def, cfg.targets[def.id]);
     if (!distributableTarget(t.probe, t.installDir) && !opts.force) {
       rows.push({
@@ -126,7 +119,6 @@ export async function applySkills(centerRoot: string, opts: SkillsOptions = {}):
     }
   }
 
-  rows.push(...skippedUnsupported);
   if (!opts.dryRun) saveState(centerRoot, state);
   return rows;
 }

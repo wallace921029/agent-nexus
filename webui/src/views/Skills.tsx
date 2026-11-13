@@ -33,10 +33,6 @@ function skillPill(state: CellState | undefined): { cls: string; text: string } 
   }
 }
 
-// 不支持本地下发的工具：优先展示 notes 里与 skills 相关的那条
-const unsupportedNote = (target: TargetStatus): string =>
-  target.eff.notes?.find((note) => note.toLowerCase().includes('skill')) ??
-  'Skills are managed inside the app itself; agent-nexus only distributes MCP here.';
 
 interface EditDir {
   id: string;
@@ -58,8 +54,7 @@ export default function Skills() {
   const missingTargets = targets.filter((target) => !target.installed);
   const current =
     targets.find((target) => target.eff.id === selected) ??
-    installedTargets.find((target) => target.eff.supports.skills) ??
-    targets.find((target) => target.eff.supports.skills) ??
+    installedTargets[0] ??
     targets[0];
 
   function toolButton(target: TargetStatus) {
@@ -72,7 +67,6 @@ export default function Skills() {
         className={[
           'flex w-full items-center gap-3.5 rounded-xl border bg-panel px-4 py-3 text-left transition-colors hover:border-line2',
           current?.eff.id === target.eff.id ? 'row-sel border-accent/50 bg-accent/[0.06]' : 'border-line',
-          !target.eff.supports.skills ? 'opacity-55' : '',
         ].filter(Boolean).join(' ')}
         onClick={() => setSelected(target.eff.id)}
       >
@@ -85,7 +79,7 @@ export default function Skills() {
             {target.eff.customized ? <span className="rounded bg-accent/12 px-1.5 py-0.5 text-[10px] text-accent">custom dir</span> : null}
           </div>
           <div className="mt-0.5 text-[11px] text-sub/75">
-            {target.eff.supports.skills ? `${linkedCount(target)} / ${skills.length} linked` : 'skills not distributable'}
+            {linkedCount(target)} / {skills.length} linked
           </div>
         </div>
         {!target.installed ? (
@@ -202,51 +196,38 @@ export default function Skills() {
                 <div className="flex items-center gap-2.5">
                   <img src={LOGOS[current.eff.id]} className="h-4.5 w-4.5 rounded-sm object-contain" alt="" />
                   <span className="text-[14px] font-semibold">{current.eff.label}</span>
-                  {current.eff.supports.skills ? (
-                    <span className={`rounded-md border px-1.5 py-0.5 text-[10.5px] font-medium ${linkedCount(current) ? 'border-ok/40 bg-ok/10 text-ok' : 'border-line text-sub/70'}`}>
-                      {linkedCount(current)} / {skills.length} linked
-                    </span>
-                  ) : null}
+                  <span className={`rounded-md border px-1.5 py-0.5 text-[10.5px] font-medium ${linkedCount(current) ? 'border-ok/40 bg-ok/10 text-ok' : 'border-line text-sub/70'}`}>
+                    {linkedCount(current)} / {skills.length} linked
+                  </span>
                 </div>
                 <div className="mt-0.5 truncate font-mono text-[11.5px] text-sub/80" title={current.eff.skillsDir}>
-                  {current.eff.supports.skills ? current.eff.skillsDir : '—'}
+                  {current.eff.skillsDir}
                 </div>
               </div>
-              {current.eff.supports.skills ? (
-                <div className="flex items-center gap-1.5">
-                  <motion.button
-                    type="button" whileTap={{ scale: 0.98 }}
-                    className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-accent/60 hover:text-accent"
-                    disabled={busy || !skills.length || (!current.installed && !current.residual)}
-                    onClick={() => void distributeTool(current)}
-                  >
-                    Distribute all
-                  </motion.button>
-                  <motion.button
-                    type="button" whileTap={{ scale: 0.98 }}
-                    className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-err/60 hover:text-err"
-                    disabled={busy || !skills.length || (!current.installed && !current.residual)}
-                    onClick={() => void retractTool(current)}
-                  >
-                    Retract all
-                  </motion.button>
-                  <motion.button type="button" whileTap={{ scale: 0.98 }} className="rounded-lg p-1.5 text-sub/60 transition-colors hover:text-accent" title="Custom skills dir" onClick={() => openEditDir(current)}>
-                    <Ic name="edit" />
-                  </motion.button>
-                </div>
-              ) : null}
+              <div className="flex items-center gap-1.5">
+                <motion.button
+                  type="button" whileTap={{ scale: 0.98 }}
+                  className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-accent/60 hover:text-accent"
+                  disabled={busy || !skills.length || (!current.installed && !current.residual)}
+                  onClick={() => void distributeTool(current)}
+                >
+                  Distribute all
+                </motion.button>
+                <motion.button
+                  type="button" whileTap={{ scale: 0.98 }}
+                  className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-err/60 hover:text-err"
+                  disabled={busy || !skills.length || (!current.installed && !current.residual)}
+                  onClick={() => void retractTool(current)}
+                >
+                  Retract all
+                </motion.button>
+                <motion.button type="button" whileTap={{ scale: 0.98 }} className="rounded-lg p-1.5 text-sub/60 transition-colors hover:text-accent" title="Custom skills dir" onClick={() => openEditDir(current)}>
+                  <Ic name="edit" />
+                </motion.button>
+              </div>
             </div>
 
-            {/* 不支持 skills 的工具 */}
-            {!current.eff.supports.skills ? (
-              <div className="flex flex-col items-center gap-3 px-4 py-14 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full border border-line bg-panel2 text-sub"><Ic name="blocks" /></div>
-                <div>
-                  <div className="text-[14px] font-medium">Local skill distribution isn't available for this tool</div>
-                  <div className="mt-1 text-[12px] text-sub/75">{unsupportedNote(current)}</div>
-                </div>
-              </div>
-            ) : !skills.length ? (
+            {!skills.length ? (
               /* 中心还没有任何技能 */
               <div className="flex flex-col items-center gap-3 px-4 py-14 text-center">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full border border-line bg-panel2 text-sub"><Ic name="folder" /></div>
@@ -303,7 +284,7 @@ export default function Skills() {
             )}
 
             {/* 图例 */}
-            {current.eff.supports.skills && skills.length ? (
+            {skills.length ? (
               <div className="border-t border-line px-5 py-3 text-[11px] text-sub/75">
                 linked = symlink into the center · foreign = exists but not ours (never touched) · broken = re-link to fix
               </div>

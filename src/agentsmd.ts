@@ -3,16 +3,14 @@ import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { enabledTargets, loadConfig } from './config.js';
 import { ensureLink, inspectLink, loadState, retractLink, saveState, type LinkOutcome, type LinkState } from './link.js';
-import { homeDir } from './paths.js';
+import { baseMdPath, homeDir } from './paths.js';
 import { distributableTarget } from './detect.js';
-import { renderInstruction } from './render.js';
 import { effectiveTarget, AGENTS_REF_FILE, AGENTS_REF_OLD_LINE, type EffectiveTarget } from './targets.js';
 import type { TargetId } from './targets.js';
 
 export interface SyncRow extends LinkOutcome {
   id: TargetId | '-';
   label: string;
-  render?: { bytes: number; overlayUsed: boolean };
 }
 
 export interface SyncOptions {
@@ -29,7 +27,7 @@ function refLineFor(t: EffectiveTarget): string {
 }
 
 /**
- * agentsRef（claude / claude-desktop）的引用文件处理：
+ * agentsRef（claude）的引用文件处理：
  * CLAUDE.md 不存在 → 创建 `@~/…/AGENTS.md` 引用；旧方案的我方 CLAUDE.md 软链或旧版相对引用行 → 迁移；
  * 他人文件一律不动。返回追加到行 detail 的说明。
  */
@@ -78,21 +76,20 @@ function retractRefFile(t: EffectiveTarget, dryRun: boolean): string {
   }
 }
 
-/** 渲染 AGENTS.md 并下发（软链，Windows 无权限时复制）；已有他人文件按策略改名备份后接管；--retract 收回 */
+/** 把中心 AGENTS.md 直接软链给各工具（Windows 无权限时复制）；已有他人文件按策略改名备份后接管；--retract 收回 */
 export async function syncAgents(centerRoot: string, opts: SyncOptions = {}): Promise<SyncRow[]> {
   const cfg = loadConfig(centerRoot);
   const state = loadState(centerRoot);
   const home = homeDir();
   const rows: SyncRow[] = [];
+  const source = baseMdPath(centerRoot);
+  if (!opts.retract && !fs.existsSync(source)) {
+    throw new Error(`缺少 ${source}，请先运行 agent-nexus init`);
+  }
 
   for (const def of enabledTargets(cfg)) {
     if (opts.only?.length && !opts.only.includes(def.id)) continue;
     const t = effectiveTarget(home, def, cfg.targets[def.id]);
-
-    if (!t.supports.instructions) {
-      rows.push({ id: def.id, label: t.label, kind: 'skipped', link: '', detail: 'not distributable for this tool (see notes)' });
-      continue;
-    }
 
     // 分发门槛：探测不到已安装且配置目录也不存在才跳过（残留目录 = 可操作，npx 按需启动的工具目录是活的）
     if (!distributableTarget(t.probe, t.installDir) && !opts.force) {
@@ -113,8 +110,7 @@ export async function syncAgents(centerRoot: string, opts: SyncOptions = {}): Pr
       continue;
     }
 
-    const render = renderInstruction(centerRoot, t);
-    const res = await ensureLink(render.file, t.instr.path, {
+    const res = await ensureLink(source, t.instr.path, {
       kind: 'file',
       copyFallback: true,
       takeover: true,
@@ -123,20 +119,15 @@ export async function syncAgents(centerRoot: string, opts: SyncOptions = {}): Pr
       centerRoot,
     });
 
-    const row: SyncRow = {
-      id: def.id,
-      label: t.label,
-      ...res,
-      render: { bytes: render.bytes, overlayUsed: render.overlayUsed },
-    };
+    const row: SyncRow = { id: def.id, label: t.label, ...res };
     const extras: string[] = [];
     if (res.detail) extras.push(res.detail);
     if (t.instr.kind === 'agentsRef') {
       const refNote = await ensureRefFile(t, centerRoot, !!opts.dryRun);
       if (refNote) extras.push(refNote);
     }
-    if (def.id === 'codex' && render.bytes > 32 * 1024) {
-      extras.push(`rendered artifact ${(render.bytes / 1024).toFixed(1)}KiB exceeds the codex 32KiB limit and will be truncated`);
+    if (def.id === 'codex' && fs.statSync(source).size > 32 * 1024) {
+      extras.push(`AGENTS.md ${(fs.statSync(source).size / 1024).toFixed(1)}KiB exceeds the codex 32KiB limit and will be truncated`);
     }
     row.detail = extras.join('; ') || undefined;
     rows.push(row);

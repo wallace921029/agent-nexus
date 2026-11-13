@@ -5,14 +5,14 @@ import * as path from 'node:path';
 import { enabledTargets, loadConfig } from './config.js';
 import { inspectLink, loadState, type LinkInspection } from './link.js';
 import { homeDir } from './paths.js';
-import { baseMdPath } from './render.js';
+import { baseMdPath } from './paths.js';
 import { listSkills } from './skills.js';
 import { effectiveTarget } from './targets.js';
 import type { EffectiveTarget } from './targets.js';
 import { probeInstalled } from './detect.js';
 
-export type InstrState = 'none' | 'ours' | 'ours-broken' | 'copy' | 'foreign' | 'unsupported';
-export type SkillCellState = 'linked' | 'broken' | 'foreign' | 'none' | 'unsupported';
+export type InstrState = 'none' | 'ours' | 'ours-broken' | 'copy' | 'foreign';
+export type SkillCellState = 'linked' | 'broken' | 'foreign' | 'none';
 
 export interface TargetStatus {
   eff: EffectiveTarget;
@@ -73,8 +73,8 @@ export async function collectStatus(centerRoot: string): Promise<CenterStatus> {
     let broken = 0;
     let foreign = 0;
     const matrix: Record<string, SkillCellState> = {};
-    for (const s of skills) matrix[s] = eff.supports.skills ? 'none' : 'unsupported';
-    if ((installed || residual) && eff.supports.skills) {
+    for (const s of skills) matrix[s] = 'none';
+    if (installed || residual) {
       // 从目标目录一侧枚举，这样中心里已删除的 skill 留下的断链也能被发现；
       // 残留态（目录在）同样枚举 —— 派发/收回对它开放，链接状态必须如实展示
       let entries: fs.Dirent[] = [];
@@ -103,8 +103,8 @@ export async function collectStatus(centerRoot: string): Promise<CenterStatus> {
     }
     skillsMatrix[def.id] = matrix;
 
-    const info = eff.supports.instructions ? await inspectLink(eff.instr.path, centerRoot) : { type: 'none' as const, ours: false };
-    const instr: InstrState = eff.supports.instructions ? instrState(info, eff.instr.path, state.copies) : 'unsupported';
+    const info = await inspectLink(eff.instr.path, centerRoot);
+    const instr: InstrState = instrState(info, eff.instr.path, state.copies);
 
     targets.push({
       eff,
@@ -151,7 +151,7 @@ export async function runDoctor(centerRoot: string, opts: { probeCodex?: boolean
     if (t.skillsForeign > 0) {
       warnings.push(`[${t.eff.id}] ${t.skillsForeign} foreign entries with colliding names in skills dir, skipped`);
     }
-    if (!t.installed && t.eff.supports.instructions) {
+    if (!t.installed) {
       // 残留目录 = 工具可能是 npx 按需启动形态，目录仍被读取 → 可分发；完全无痕才真正跳过
       warnings.push(
         t.residual
@@ -164,9 +164,9 @@ export async function runDoctor(centerRoot: string, opts: { probeCodex?: boolean
   const codex = status.targets.find((t) => t.eff.id === 'codex');
   if (codex?.instr === 'ours') {
     try {
-      const buildFile = path.join(centerRoot, '.config', 'build', 'codex', codex.eff.instr.fileName);
-      if (fs.existsSync(buildFile) && fs.statSync(buildFile).size > 32 * 1024) {
-        warnings.push('[codex] rendered artifact exceeds 32KiB and will be truncated; trim AGENTS.md or the overlay');
+      const source = baseMdPath(centerRoot);
+      if (fs.existsSync(source) && fs.statSync(source).size > 32 * 1024) {
+        warnings.push('[codex] AGENTS.md exceeds 32KiB and will be truncated; trim it');
       }
     } catch {
       /* ignore */

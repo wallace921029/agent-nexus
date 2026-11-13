@@ -188,14 +188,12 @@ export default function Files() {
 
   const p = openRel ?? '';
   let hint = '';
-  if (p === 'AGENTS.md' || p.startsWith('overlays/')) {
-    hint = 'This is an instruction source file: re-distribute from the AGENTS.md page (or run sync-agents) after saving to take effect.';
+  if (p === 'AGENTS.md') {
+    hint = 'This is the instruction source file: saves take effect immediately in tools it is already distributed to (tools read through symlinks).';
   } else if (p.startsWith('skills/')) {
     hint = 'This is a skill source file: saves take effect immediately (tools read through symlinks).';
   } else if (p === 'mcp.json') {
     hint = 'Standard mcpServers format (same as Claude\'s config): the proxy aggregates every entry — see the parsed result on the MCP Servers view. Per-tool subsets go under "mcpProfiles" in .config/config.json.';
-  } else if (p.startsWith('.config/build/')) {
-    hint = 'Auto-generated artifact: overwritten on the next sync-agents — edit AGENTS.md / overlays instead.';
   }
 
   function openNewFile(node: TreeNode | null): void {

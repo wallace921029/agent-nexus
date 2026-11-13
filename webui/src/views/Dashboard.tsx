@@ -16,7 +16,6 @@ const instrMeta: Record<TargetStatus['instr'], { dot: string; label: string }> =
   copy: { dot: 'dot-ok', label: 'Copied' },
   // foreign 同 none：他人文件派发时自动 backup 接管，不再特别提示
   foreign: { dot: 'dot-off', label: 'Not distributed' },
-  unsupported: { dot: 'dot-off', label: 'MCP only' },
 };
 
 const quickLinks: Array<{ view: View; label: string; description: string; icon: IconName }> = [
@@ -104,7 +103,7 @@ export default function Dashboard() {
                       {target.installed ? 'Available' : target.residual ? 'Not installed (config remains)' : 'Not installed'}
                     </span>
             <span className="mt-1 flex items-center gap-1.5 text-[10px] text-sub lg:hidden">
-              <span>{instrMeta[target.instr].label}</span><span className="text-sub/35">·</span><span>{target.eff.supports.skills ? `${target.skillsLinked}/${target.skillsTotal} skills` : 'No skills'}</span>
+              <span>{instrMeta[target.instr].label}</span><span className="text-sub/35">·</span><span>{target.skillsLinked}/{target.skillsTotal} skills</span>
             </span>
           </span>
         </span>
@@ -114,17 +113,15 @@ export default function Dashboard() {
           <span className="truncate">{instrMeta[target.instr].label}</span>
         </span>
 
-        {target.eff.supports.skills ? (
-          <span className="hidden lg:block">
-            <span className="flex items-center justify-between gap-2 text-[10.5px]">
-              <span className="text-fg">{target.skillsLinked}<span className="text-sub/60"> / {target.skillsTotal}</span></span>
-              {target.skillsBroken ? <span className="text-err">{target.skillsBroken} broken</span> : <span className="text-sub/55">{skillPercent(target)}%</span>}
-            </span>
-            <span className="mt-2 block h-1 overflow-hidden rounded-full bg-line">
-              <span className={`block h-full rounded-full transition-[width] ${target.skillsBroken ? 'bg-err' : 'bg-accent'}`} style={{ width: `${skillPercent(target)}%` }}></span>
-            </span>
+        <span className="hidden lg:block">
+          <span className="flex items-center justify-between gap-2 text-[10.5px]">
+            <span className="text-fg">{target.skillsLinked}<span className="text-sub/60"> / {target.skillsTotal}</span></span>
+            {target.skillsBroken ? <span className="text-err">{target.skillsBroken} broken</span> : <span className="text-sub/55">{skillPercent(target)}%</span>}
           </span>
-        ) : <span className="hidden text-[11px] text-sub/50 lg:block">Not supported</span>}
+          <span className="mt-2 block h-1 overflow-hidden rounded-full bg-line">
+            <span className={`block h-full rounded-full transition-[width] ${target.skillsBroken ? 'bg-err' : 'bg-accent'}`} style={{ width: `${skillPercent(target)}%` }}></span>
+          </span>
+        </span>
 
         <span className="flex h-7 w-7 items-center justify-center justify-self-end rounded-lg text-sub/45 transition-all group-hover:bg-accent/10 group-hover:translate-x-0.5 group-hover:text-accent">
           <Ic name="chevron" />
@@ -137,12 +134,12 @@ export default function Dashboard() {
   const attentionCount = issueCount + warningCount;
   const installedCount = targets.filter((target) => target.installed).length;
   const missingCount = targets.length - installedCount;
-  const instructionTargetCount = targets.filter((target) => target.eff.supports.instructions).length;
-  const instructionReadyCount = targets.filter((target) => target.eff.supports.instructions && (target.instr === 'ours' || target.instr === 'copy')).length;
+  const instructionTargetCount = targets.length;
+  const instructionReadyCount = targets.filter((target) => target.instr === 'ours' || target.instr === 'copy').length;
   const instructionPendingCount = instructionTargetCount - instructionReadyCount;
-  const skillTargetCount = targets.filter((target) => target.eff.supports.skills).length;
+  const skillTargetCount = targets.length;
   const skillsLinked = targets.reduce((sum, target) => sum + target.skillsLinked, 0);
-  const skillsTotal = targets.reduce((sum, target) => sum + (target.eff.supports.skills ? target.skillsTotal : 0), 0);
+  const skillsTotal = targets.reduce((sum, target) => sum + target.skillsTotal, 0);
   const skillsBroken = targets.reduce((sum, target) => sum + target.skillsBroken, 0);
 
   const healthTone: 'ok' | 'warn' | 'err' = issueCount ? 'err' : warningCount ? 'warn' : 'ok';

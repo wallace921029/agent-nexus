@@ -10,26 +10,19 @@ import * as path from 'node:path';
  */
 export type TargetId =
   | 'claude'
-  | 'claude-desktop'
   | 'codex'
   | 'copilot'
   | 'opencode'
-  | 'dsh'
-  | 'antigravity'
-  | 'zcode';
+  | 'antigravity';
 
 export interface InstrSpec {
   /** 相对家目录的 POSIX 风格路径 */
   rel: string;
-  kind: 'file' | 'rulesDir' | 'agentsRef';
-  /** kind=rulesDir 时写入规则目录的文件名 */
-  fileName?: string;
-  /** 渲染产物需附加的 YAML frontmatter（如 Antigravity 模块化规则要求 trigger 字段，否则被静默忽略） */
-  frontmatter?: Record<string, string>;
+  kind: 'file' | 'agentsRef';
 }
 
-/** agentsRef 的语义（claude / claude-desktop）：
- *  rel = 工具根目录；派发 = 软链 <dir>/AGENTS.md（渲染产物）；
+/** agentsRef 的语义（claude）：
+ *  rel = 工具根目录；派发 = 软链 <dir>/AGENTS.md → 中心 AGENTS.md；
  *  <dir>/CLAUDE.md 不存在则创建对 AGENTS.md 的 @ 导入（绝对 ~/ 路径形式，用户级导入不触发信任确认）；
  *  已存在的他人 CLAUDE.md 一律不动。 */
 export const AGENTS_REF_FILE = 'AGENTS.md';
@@ -61,8 +54,6 @@ export interface TargetDef {
   instr: InstrSpec;
   /** 各工具原生 MCP 配置文件（相对家目录）；即便默认值相同也各自独立、可单独覆盖 */
   mcpConfig: string;
-  /** 能力声明（默认都支持）；如 claude-desktop 仅支持 MCP */
-  supports?: { instructions: boolean; skills: boolean };
   notes?: string[];
 }
 
@@ -81,37 +72,8 @@ export const TARGETS: readonly TargetDef[] = [
     ],
   },
   {
-    id: 'claude-desktop',
-    label: 'Claude Desktop',
-    installDir:
-      process.platform === 'darwin'
-        ? 'Library/Application Support/Claude'
-        : process.platform === 'win32'
-          ? 'AppData/Roaming/Claude'
-          : '.config/Claude',
-    // Linux 无官方桌面版：平台无候选时自动回退目录存在性判断；macOS 系统级 + 用户级安装位置都查
-    probe: {
-      macApps: ['/Applications/Claude.app', '~/Applications/Claude.app'],
-      winPaths: ['%LOCALAPPDATA%\\AnthropicClaude'],
-    },
-    skillsRel: '',
-    instr: { rel: '', kind: 'agentsRef' },
-    mcpConfig:
-      process.platform === 'darwin'
-        ? 'Library/Application Support/Claude/claude_desktop_config.json'
-        : process.platform === 'win32'
-          ? 'AppData/Roaming/Claude/claude_desktop_config.json'
-          : '.config/Claude/claude_desktop_config.json',
-    supports: { instructions: true, skills: false },
-    notes: [
-      'Claude Desktop / claude.ai does not read CLAUDE.md or AGENTS.md (Claude Code-only mechanism); agent-nexus still places AGENTS.md + a CLAUDE.md reference here for future/manual use',
-      'nothing syncs across Claude products — skills are uploaded as ZIP inside the app (no local dir to symlink), memories/preferences live in app settings',
-      'MCP works via claude_desktop_config.json (stdio only); claude.ai connectors do NOT come from this file',
-    ],
-  },
-  {
     id: 'codex',
-    label: 'Codex',
+    label: 'Codex CLI',
     installDir: '.codex',
     probe: { commands: ['codex'] },
     skillsRel: '.agents/skills',
@@ -120,13 +82,13 @@ export const TARGETS: readonly TargetDef[] = [
     notes: [
       'one row covers both Codex CLI and the ChatGPT desktop app — they share ~/.codex entirely (config.toml, AGENTS.md, app-server)',
       'skills use the current official dir ~/.agents/skills; ~/.codex/skills is legacy and unused',
-      'note: copilot/opencode/zcode also scan ~/.agents/skills as a secondary path; skills enabled for codex are visible to them',
+      'note: copilot/opencode also scan ~/.agents/skills as a secondary path; skills enabled for codex are visible to them',
       'instruction files over 32KiB are truncated by codex (doctor checks this)',
     ],
   },
   {
     id: 'copilot',
-    label: 'Copilot',
+    label: 'GitHub Copilot CLI',
     installDir: '.copilot',
     probe: { commands: ['copilot'] },
     skillsRel: '.copilot/skills',
@@ -145,30 +107,15 @@ export const TARGETS: readonly TargetDef[] = [
     skillsRel: '.config/opencode/skills',
     instr: { rel: '.config/opencode/AGENTS.md', kind: 'file' },
     mcpConfig: '.config/opencode/opencode.json',
-    notes: ['opencode does not support @import; rendered as plain concatenation'],
-  },
-  {
-    id: 'dsh',
-    label: 'DeepSeek Harness',
-    installDir: '.dsh',
-    probe: { commands: ['dsh'] },
-    skillsRel: '.dsh/skills',
-    instr: { rel: '.dsh/AGENTS.md', kind: 'file' },
-    mcpConfig: '.dsh/cordis.patch.yml',
-    notes: [
-      'instructions load on NEW sessions only (project-level overrides global; global+project budget 65536 bytes, global dropped first when exceeded)',
-      'skills hot-load via watcher (SKILL.md frontmatter required: name kebab-case + description; one level scanned, .system skipped)',
-      'MCP = YAML patch rows in ~/.dsh/cordis.patch.yml (home patch, applies to EVERY profile; web hot-reloads, others need restart; file must not be empty/comments-only — write [] when unused)',
-    ],
   },
   {
     id: 'antigravity',
-    label: 'Antigravity',
+    label: 'Antigravity CLI',
     installDir: '.gemini',
-    // gemini CLI 与 Antigravity 共读 ~/.gemini/config，任一存在即视为该行有效；
+    // Antigravity CLI 的命令名是 agy；gemini CLI 是另一个产品，不作为安装依据（仅共用 ~/.gemini 目录）；
     // Windows 应用位置按 Electron 应用惯例（%LOCALAPPDATA%\Programs）尽力探测
     probe: {
-      commands: ['antigravity', 'gemini'],
+      commands: ['agy', 'antigravity'],
       macApps: ['/Applications/Antigravity.app', '~/Applications/Antigravity.app'],
       winPaths: ['%LOCALAPPDATA%\\Programs\\Antigravity'],
     },
@@ -180,15 +127,6 @@ export const TARGETS: readonly TargetDef[] = [
       'Antigravity IDE (~/.gemini/antigravity-ide) is a separate product, not covered by this row',
       '~/.gemini/antigravity-cli/ is app-internal state, not user config',
     ],
-  },
-  {
-    id: 'zcode',
-    label: 'ZCode',
-    installDir: '.zcode',
-    probe: { commands: ['zcode'] },
-    skillsRel: '.zcode/skills',
-    instr: { rel: '.zcode/AGENTS.md', kind: 'file' },
-    mcpConfig: '.zcode/cli/config.json',
   },
 ];
 
@@ -205,8 +143,8 @@ export interface TargetPathOverride {
   enabled?: boolean;
   /** 用户级 skills 目录，相对家目录或绝对路径（支持 ~ 开头） */
   skillsDir?: string | null;
-  /** 全局指令位置：字符串（文件路径）或对象（rules 目录需 fileName） */
-  instructions?: string | { path: string; type?: 'file' | 'rulesDir'; fileName?: string } | null;
+  /** 全局指令链接位置（文件路径） */
+  instructions?: string | null;
   /** 该工具原生 MCP 配置文件路径（相对家目录 / ~/ / 绝对路径） */
   mcpConfig?: string | null;
 }
@@ -220,18 +158,14 @@ export interface EffectiveTarget {
   installDir: string;
   /** “已安装”探测声明（原样来自 TargetDef） */
   probe?: InstallProbe;
-  /** 用户级 skills 目录（绝对路径；不支持 skills 时为空串） */
+  /** 用户级 skills 目录（绝对路径） */
   skillsDir: string;
   instr: {
-    /** 指令文件（或 rules 目录下的文件）绝对路径；不支持指令时为空串 */
+    /** 指令链接（指向中心 AGENTS.md）的绝对路径 */
     path: string;
-    kind: 'file' | 'rulesDir' | 'agentsRef';
-    /** 渲染产物文件名 */
-    fileName: string;
+    kind: 'file' | 'agentsRef';
     /** kind=agentsRef：引用文件 CLAUDE.md 的绝对路径 */
     refPath?: string;
-    /** 渲染产物需附加的 YAML frontmatter（模块化规则目录用） */
-    frontmatter?: Record<string, string>;
   };
   /** 该工具原生 MCP 配置文件（绝对路径） */
   mcpConfig: string;
@@ -239,8 +173,6 @@ export interface EffectiveTarget {
   customized: boolean;
   /** MCP 配置路径是否使用了用户覆盖 */
   mcpConfigCustomized: boolean;
-  /** 能力声明 */
-  supports: { instructions: boolean; skills: boolean };
 }
 
 /** 支持 "~/x"、"/abs/x"、"rel/to/home" 三种写法 */
@@ -259,29 +191,15 @@ export function effectiveTarget(home: string, def: TargetDef, ov?: TargetPathOve
 
   let instrPathRel = def.instr.rel;
   let kind = def.instr.kind;
-  let fileName = '';
   const ins = ov?.instructions;
   if (typeof ins === 'string') {
     instrPathRel = ins;
     kind = 'file';
     customized = true;
-  } else if (ins && typeof ins === 'object') {
-    instrPathRel = ins.path;
-    kind = ins.type ?? 'file';
-    fileName = ins.fileName ?? '';
-    customized = true;
   }
-  // rulesDir 类型默认 agent-nexus.md；file 类型取路径 basename 作为渲染产物名；
-  // agentsRef 类型：rel 为工具根目录（空串=installDir），产物固定 AGENTS.md
-  let refDirRel: string | null = null;
-  if (kind === 'agentsRef') {
-    refDirRel = instrPathRel || def.installDir;
-    fileName = AGENTS_REF_FILE;
-  }
-  if (!fileName) fileName = kind === 'rulesDir' ? 'agent-nexus.md' : '';
-  if (!fileName) fileName = path.posix.basename(instrPathRel.replace(/\\/g, '/'));
+  // agentsRef 类型：rel 为工具根目录（空串=installDir），链接固定叫 AGENTS.md
+  const refDirRel = kind === 'agentsRef' ? instrPathRel || def.installDir : null;
 
-  const supports = def.supports ?? { instructions: true, skills: true };
   const mcpConfigRel = ov?.mcpConfig ?? def.mcpConfig;
   const refDir = refDirRel ? resolveUserPath(home, refDirRel) : '';
   return {
@@ -290,24 +208,14 @@ export function effectiveTarget(home: string, def: TargetDef, ov?: TargetPathOve
     notes: def.notes,
     installDir: path.join(home, ...def.installDir.split('/')),
     probe: def.probe,
-    skillsDir: supports.skills ? resolveUserPath(home, skillsRel) : '',
-    instr: supports.instructions
-      ? {
-          path:
-            kind === 'rulesDir'
-              ? path.join(resolveUserPath(home, instrPathRel), fileName)
-              : kind === 'agentsRef'
-                ? path.join(refDir, fileName)
-                : resolveUserPath(home, instrPathRel),
-          kind,
-          fileName,
-          ...(kind === 'agentsRef' ? { refPath: path.join(refDir, AGENTS_REF_REF_FILE) } : {}),
-          ...(def.instr.frontmatter ? { frontmatter: def.instr.frontmatter } : {}),
-        }
-      : { path: '', kind, fileName },
+    skillsDir: resolveUserPath(home, skillsRel),
+    instr: {
+      path: kind === 'agentsRef' ? path.join(refDir, AGENTS_REF_FILE) : resolveUserPath(home, instrPathRel),
+      kind,
+      ...(kind === 'agentsRef' ? { refPath: path.join(refDir, AGENTS_REF_REF_FILE) } : {}),
+    },
     mcpConfig: resolveUserPath(home, mcpConfigRel),
     customized,
     mcpConfigCustomized: ov?.mcpConfig != null && ov.mcpConfig !== def.mcpConfig,
-    supports,
   };
 }

@@ -55,7 +55,7 @@ export function probeInstalled(probe: InstallProbe | undefined, installDir: stri
 }
 
 /** 可分发判定：安装探测命中，或配置目录已存在即可。
-    残留目录也算 —— 工具可能是 npx 按需启动的 web/客户端形态（如 `npx @deepseek-ai/dsh web`），
+    残留目录也算 —— 工具可能是 npx 按需启动的形态，
     PATH 上没有命令但目录是活的、会被读取；只有「探测不到且目录不存在」才真正跳过。 */
 export function distributableTarget(probe: InstallProbe | undefined, installDir: string): boolean {
   return probeInstalled(probe, installDir) || fs.existsSync(installDir);

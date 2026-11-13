@@ -5,10 +5,9 @@ import { TARGETS, TARGET_IDS, type TargetDef, type TargetId, type TargetPathOver
 /**
  * 中心工作区布局（~/.agent-nexus）：
  *   AGENTS.md        指令公共底座（用户内容）
- *   overlays/*.md    各家专属片段（用户内容，可选）
  *   skills/          skill 源（用户内容）
  *   mcp.json         标准 mcpServers 格式的 MCP 服务器清单（用户内容）
- *   .config/         项目自身：可选 config.json（目标开关/路径覆盖/mcpProfiles）、build/、state.json、mcp-logs/
+ *   .config/         项目自身：可选 config.json（目标开关/路径覆盖/mcpProfiles）、state.json、mcp-logs/
  */
 
 /** MCP 上游定义：stdio 子进程 或 Streamable HTTP 远程 */

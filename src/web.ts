@@ -102,15 +102,6 @@ function detectNexusMcp(cfg: NexusConfig): Record<string, string[]> {
         continue;
       }
     }
-    // dsh：YAML patch 文件里的 serverName 行
-    if (def.id === 'dsh') {
-      const found = new Set<string>();
-      for (const m of fs.readFileSync(p, 'utf8').matchAll(/serverName:\s*([A-Za-z0-9_-]{1,32})/g)) {
-        if (NAME_RE.test(m[1])) found.add(m[1]);
-      }
-      out[def.id] = [...found];
-      continue;
-    }
     if (def.id === 'codex') {
       const found = new Set<string>();
       for (const m of fs.readFileSync(p, 'utf8').matchAll(/^\s*\[mcp_servers\.([A-Za-z0-9._-]+)\]/gm)) {
@@ -127,7 +118,7 @@ function detectNexusMcp(cfg: NexusConfig): Record<string, string[]> {
     } else {
       raw = readJson(p);
     }
-    out[def.id] = keys(def.id === 'zcode' || def.id === 'opencode' ? raw?.mcp?.servers : raw?.mcpServers);
+    out[def.id] = keys(def.id === 'opencode' ? raw?.mcp?.servers : raw?.mcpServers);
   }
   return out;
 }

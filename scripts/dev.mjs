@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // 一条命令启动面板开发环境：后端（node dist/cli.js web，8741）+ 前端（Vite，5173）
-// - 8741 已有面板后端在运行时自动复用，不重复启动
+// - 后端热更新：tsc --watch 持续编译 src/ → dist/，node --watch-path=dist 在 dist 变化后自动重启后端
+// - 8741 已有面板后端在运行时自动复用（复用的外部后端不带热更新）
 // - Ctrl+C / 任一子进程退出时，全部一起退出
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -89,8 +90,14 @@ process.on('SIGTERM', () => {
 if (await backendAlive()) {
   console.log(`[web ] a panel backend is already running on ${WEB_PORT}, reusing it`);
 } else {
-  console.log(`[web ] starting panel backend on 127.0.0.1:${WEB_PORT}`);
-  launch('web ', 'node', [path.join('dist', 'cli.js'), 'web', '--no-open', '-p', String(WEB_PORT)], root);
+  console.log(`[web ] starting panel backend on 127.0.0.1:${WEB_PORT} (auto-restart on dist/ changes)`);
+  launch('web ', process.execPath, ['--watch-path=dist', path.join('dist', 'cli.js'), 'web', '--no-open', '-p', String(WEB_PORT)], root);
+  const tscBin = path.join(root, 'node_modules', 'typescript', 'bin', 'tsc');
+  if (existsSync(tscBin)) {
+    launch('tsc ', process.execPath, [tscBin, '-p', 'tsconfig.json', '--watch', '--preserveWatchOutput'], root);
+  } else {
+    console.warn('[tsc ] typescript not installed (npm install at the repo root) — backend hot reload disabled');
+  }
 }
 console.log('[vite] starting the Vite dev server…');
 const viteBin = path.join(root, 'webui', 'node_modules', 'vite', 'bin', 'vite.js');

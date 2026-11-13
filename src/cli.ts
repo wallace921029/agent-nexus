@@ -35,7 +35,6 @@ function printRows(rows: Array<SyncRow | SkillsRow>): void {
     const parts = [mark(r.kind).padEnd(10), `[${r.id}]`];
     if ('skill' in r && r.skill !== '-') parts.push(String(r.skill));
     const extra: string[] = [];
-    if ('render' in r && r.render) extra.push(`rendered ${(r.render.bytes / 1024).toFixed(1)}KiB${r.render.overlayUsed ? ' (with overlay)' : ''}`);
     if (r.detail) extra.push(r.detail);
     const tail = extra.length ? `  — ${extra.join('; ')}` : '';
     console.log(`${parts.join(' ').padEnd(0)}  ${r.link}${tail}`);
@@ -67,7 +66,7 @@ function parseIds(raw: string[] | undefined): TargetId[] | undefined {
 const program = new Command();
 program
   .name('agent-nexus')
-  .description('Unified config center for agent tools: AGENTS.md rendering & distribution, skills link matrix, MCP aggregator')
+  .description('Unified config center for agent tools: AGENTS.md distribution, skills link matrix, MCP aggregator')
   .version(VERSION)
   .option('-c, --center <path>', 'center workspace path (default ~/.agent-nexus, or NEXUS_CENTER env)');
 
@@ -89,8 +88,8 @@ program
 
 program
   .command('sync-agents')
-  .description('Render AGENTS.md (base + overlay) and distribute as symlinks/copies to each tool')
-  .option('-t, --target <ids...>', 'only these targets, e.g. -t codex zcode')
+  .description('Link the center AGENTS.md into each tool (symlink; copy on Windows without symlink rights)')
+  .option('-t, --target <ids...>', 'only these targets, e.g. -t codex opencode')
   .option('-n, --dry-run', 'report actions without changing anything')
   .option('--force', 'distribute even if the tool dir is missing')
   .option('-r, --retract', 'retract instruction links (all when no -t given)')
@@ -143,7 +142,6 @@ program
         'ours-broken': 'instructions: broken!',
         copy: 'instructions: copy mode',
         foreign: 'instructions: foreign file (untouched)',
-        unsupported: 'instructions: not distributable (see notes)',
       };
       const custom = t.eff.customized ? ' [custom path]' : '';
       console.log(`${(t.eff.label + custom).padEnd(20)} ${install.padEnd(7)} ${skills.padEnd(22)} ${instrMap[t.instr]}`);

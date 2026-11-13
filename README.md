@@ -4,9 +4,9 @@
 
 **One config, synced to every AI coding tool on your machine.**
 
-Using Claude Code, Codex, Copilot, OpenCode and more at the same time? Each tool wants its own copy of your global rules, skills, and MCP servers — every change has to be repeated tool by tool. agent-nexus keeps all of it in one place (`~/.agent-nexus`): write once, distribute everywhere with one click.
+Using Claude Code, Codex CLI, GitHub Copilot CLI, OpenCode and more at the same time? Each tool wants its own copy of your global rules, skills, and MCP servers — every change has to be repeated tool by tool. agent-nexus keeps all of it in one place (`~/.agent-nexus`): write once, distribute everywhere with one click.
 
-- **Global instructions**: write a single `AGENTS.md`; it is rendered under each tool's expected file name (CLAUDE.md, copilot-instructions.md, …) and distributed in one click
+- **Global instructions**: write a single `AGENTS.md` and symlink it with one click to where each tool expects it (`.claude/`, `.codex/AGENTS.md`, `copilot-instructions.md`, …); later edits take effect everywhere immediately
 - **Skills** (instruction packages that extend what an AI assistant can do): keep them in one folder and distribute them to every tool by ticking checkboxes in the panel
 - **MCP servers** (MCP: Model Context Protocol — the standard interface for AI tools to call external capabilities): list all your servers in one file and point every tool at agent-nexus as its single MCP entry; adding a server later no longer means editing every tool's config
 
@@ -34,19 +34,19 @@ The panel listens on 127.0.0.1 only, has no password, and is meant for personal 
 | Tool | Instructions | Skills | MCP |
 |---|---|---|---|
 | Claude Code | ✅ | ✅ | ✅ |
-| Codex (CLI / ChatGPT desktop) | ✅ | ✅ | ✅ |
-| GitHub Copilot (CLI / VS Code / App) | ✅ | ✅ | ✅ |
-| OpenCode (CLI / desktop) | ✅ | ✅ | ✅ |
-| Antigravity (desktop / CLI) | ✅ | ✅ | ✅ |
-| DeepSeek Harness | ✅ | ✅ | ✅ |
-| ZCode | ✅ | ✅ | ✅ |
-| Claude Desktop | — (no local instructions file) | upload in-app | ✅ |
+| Codex CLI | ✅ | ✅ | ✅ |
+| GitHub Copilot CLI | ✅ | ✅ | ✅ |
+| OpenCode | ✅ | ✅ | ✅ |
+| Antigravity CLI | ✅ | ✅ | ✅ |
 
 Behavior notes:
 
 - Instructions and skills are distributed as symlinks (junctions on Windows) — no duplicate copies inside each tool's directory. If the target already holds someone else's file: instruction files are backed up automatically (renamed with a timestamp) and then taken over, while skills are left untouched and reported — nothing is ever silently overwritten
 - Every tool's distribution paths are customizable via the ✎ button on its row in the panel
-- To give one specific tool some extra rules, put them in `~/.agent-nexus/overlays/<tool-id>.md` — they are appended to that tool only
+
+## Upgrading from 0.4.x
+
+Version 0.5.0 no longer applies per-tool overlays or supports DeepSeek Harness, ZCode, or Claude Desktop. Move any needed overlay instructions into `AGENTS.md`, run `sync-agents` again, and review its actions and backups. Existing files and links for removed tools must be managed manually. Replace object-form instruction path overrides with a string containing the desired file path.
 
 ## Centralized MCP management
 
@@ -65,7 +65,7 @@ You can also define per-tool subsets (profiles) — for example, let one tool se
 |---|---|
 | `init` | Initialize `~/.agent-nexus` |
 | `web` | Start the web panel (`-p` to change the port, `--no-open` to skip opening the browser) |
-| `sync-agents` | Render AGENTS.md and distribute it (`-t` limit to tools, `-r` retract, `-n` dry run) |
+| `sync-agents` | Symlink AGENTS.md into each tool (`-t` limit to tools, `-r` retract, `-n` dry run) |
 | `link-skills` | Distribute skills (`-s`/`-t` limit scope, `-r` retract, `-n` dry run) |
 | `status` | Show each tool's integration status |
 | `doctor` | Health check: broken links, conflicts, missing files |
@@ -74,7 +74,7 @@ You can also define per-tool subsets (profiles) — for example, let one tool se
 
 ## Notes
 
-- Skills enabled for Codex live in `~/.agents/skills`, which Copilot / OpenCode / ZCode also scan — they will see those skills too
+- Skills enabled for Codex CLI live in `~/.agents/skills`, which GitHub Copilot CLI / OpenCode also scan — they will see those skills too
 - Windows: directories use junctions (no admin rights needed); file symlinks require enabling Developer Mode once — without it, files are copied instead and flagged in `status`
 - Each machine keeps its own copy; there is no cross-device sync. The center directory can be relocated with `--center` or the `NEXUS_CENTER` environment variable
 - The panel has no authentication and listens on localhost only — do not expose it to a network

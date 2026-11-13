@@ -32,7 +32,6 @@ function hint(target: TargetStatus): { text: string; cls: string } | null {
   if (target.instr === 'copy') return { text: 'Windows copy mode (Developer Mode off) — content refreshes on every sync.', cls: 'text-sub/80' };
   if (target.eff.instr.kind === 'agentsRef')
     return { text: 'AGENTS.md is symlinked; CLAUDE.md gets an "@~/…/AGENTS.md" absolute import (created only when missing; an existing CLAUDE.md is left alone).', cls: 'text-sub/70' };
-  if (target.instr === 'unsupported') return { text: target.eff.notes?.[0] ?? '', cls: 'text-sub/70' };
   return null;
 }
 
@@ -81,7 +80,7 @@ export default function Agents() {
       if (
         !(await confirmDialog({
           title: 'Distribute AGENTS.md to ALL distributable tools?',
-          description: 'AGENTS.md + per-tool overlays are rendered and symlinked into every tool; existing files are auto-backed-up and taken over.',
+          description: 'AGENTS.md is symlinked into every tool; existing files are auto-backed-up and taken over.',
           confirmText: 'Distribute all',
         }))
       )
@@ -187,7 +186,7 @@ export default function Agents() {
             ) : null}
           </div>
           <div className="mt-0.5 truncate font-mono text-[11.5px] text-sub/80" title={target.instrPath}>
-            {target.eff.supports.instructions ? target.instrPath : '—'}
+            {target.instrPath}
           </div>
           {targetHint?.text ? <div className={`mt-1 text-[11px] ${targetHint.cls}`}>{targetHint.text}</div> : null}
         </div>
@@ -196,31 +195,27 @@ export default function Agents() {
         <div
           className={`flex flex-none items-center gap-1.5 opacity-0 transition-opacity group-hover/card:opacity-100 focus-within:opacity-100 ${target.instr === 'ours' || target.instr === 'ours-broken' ? 'opacity-60' : ''}`}
         >
-          {target.eff.supports.instructions ? (
-            <>
-              <motion.button
-                type="button" whileTap={{ scale: 0.98 }}
-                className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-accent/60 hover:text-accent"
-                disabled={busy}
-                onClick={() => void distributeOne(target)}
-              >
-                {target.instr === 'none' || target.instr === 'ours-broken' ? 'Distribute' : 'Re-distribute'}
-              </motion.button>
-              {target.instr === 'ours' || target.instr === 'copy' || target.instr === 'ours-broken' ? (
-                <motion.button
-                  type="button" whileTap={{ scale: 0.98 }}
-                  className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-err/60 hover:text-err"
-                  disabled={busy}
-                  onClick={() => void retractOne(target)}
-                >
-                  Retract
-                </motion.button>
-              ) : null}
-              <motion.button type="button" whileTap={{ scale: 0.98 }} className="rounded-lg p-1.5 text-sub/60 transition-colors hover:text-accent" title="Custom instruction path" onClick={() => openEdit(target)}>
-                <Ic name="edit" />
-              </motion.button>
-            </>
+          <motion.button
+            type="button" whileTap={{ scale: 0.98 }}
+            className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-accent/60 hover:text-accent"
+            disabled={busy}
+            onClick={() => void distributeOne(target)}
+          >
+            {target.instr === 'none' || target.instr === 'ours-broken' ? 'Distribute' : 'Re-distribute'}
+          </motion.button>
+          {target.instr === 'ours' || target.instr === 'copy' || target.instr === 'ours-broken' ? (
+            <motion.button
+              type="button" whileTap={{ scale: 0.98 }}
+              className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] text-sub transition-colors hover:border-err/60 hover:text-err"
+              disabled={busy}
+              onClick={() => void retractOne(target)}
+            >
+              Retract
+            </motion.button>
           ) : null}
+          <motion.button type="button" whileTap={{ scale: 0.98 }} className="rounded-lg p-1.5 text-sub/60 transition-colors hover:text-accent" title="Custom instruction path" onClick={() => openEdit(target)}>
+            <Ic name="edit" />
+          </motion.button>
         </div>
       </motion.div>
     );
@@ -233,7 +228,7 @@ export default function Agents() {
         <div>
           <h2 className="text-base font-semibold">AGENTS.md distribution</h2>
           <p className="mt-0.5 text-[12px] text-sub">
-            AGENTS.md + per-tool overlays → rendered → symlinked into each tool. An existing file is auto-backed-up (<code className="font-mono">.backup-timestamp</code>) and taken over; ✎ customizes the path.
+            AGENTS.md is symlinked into each tool, so edits take effect immediately. An existing file is auto-backed-up (<code className="font-mono">.backup-timestamp</code>) and taken over; ✎ customizes the path.
           </p>
         </div>
         <div className="flex gap-2.5">
@@ -256,7 +251,7 @@ export default function Agents() {
         <Modal key="instruction-path" title={`${editing.label} · custom instruction path`} onClose={() => setEditing(null)}>
           <div className="space-y-3">
             <p className="text-[12px] text-sub">
-              Accepts home-relative (e.g. <code className="font-mono">.zcode/MY.md</code>), <code className="font-mono">~/</code>, or absolute paths. Save empty = reset to default.<br />
+              Accepts home-relative (e.g. <code className="font-mono">.codex/MY.md</code>), <code className="font-mono">~/</code>, or absolute paths. Save empty = reset to default.<br />
               Current: <code className="font-mono text-[11px]">{editing.effPath}</code>
             </p>
             <input

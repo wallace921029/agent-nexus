@@ -8,6 +8,11 @@ export function homeDir(): string {
   return override ? path.resolve(override) : os.homedir();
 }
 
+/** 中心里唯一的全局指令源文件；各工具的指令链接都直接指向它 */
+export function baseMdPath(centerRoot: string): string {
+  return path.join(centerRoot, 'AGENTS.md');
+}
+
 /** 把 POSIX 风格相对路径（如 .claude/skills）转换为当前平台的绝对路径 */
 export function toPlatformPath(home: string, rel: string): string {
   return path.join(home, ...rel.split('/'));

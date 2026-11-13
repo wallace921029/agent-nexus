@@ -4,14 +4,12 @@ import * as path from 'node:path';
 /**
  * 初始化中心工作区（~/.agent-nexus）：
  *   AGENTS.md   / mcp.json / skills/   —— 用户内容，缺失才创建
- *   .config/                        —— 项目自身（设置/渲染产物/状态/日志）
- * overlays/ 不主动创建：需要某家工具的专属差异时用户自建 overlays/<id>.md
+ *   .config/                        —— 项目自身（设置/状态/日志）
  */
 
 const AGENTS_SAMPLE = `# Global instruction base (AGENTS.md)
 
-> Global instructions shared by all agents. After editing, run \`agent-nexus sync-agents\` (or distribute from the web panel).
-> Per-tool differences go in overlays/<tool-id>.md (optional).
+> Global instructions shared by all agents. Run \`agent-nexus sync-agents\` once (or distribute from the web panel) to symlink this file into each tool; later edits take effect immediately.
 
 ## Example: reply style
 

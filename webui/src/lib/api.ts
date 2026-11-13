@@ -5,13 +5,12 @@ export interface EffectiveTarget {
   notes?: string[];
   installDir: string;
   skillsDir: string;
-  instr: { path: string; kind: 'file' | 'rulesDir' | 'agentsRef'; fileName: string; refPath?: string; frontmatter?: Record<string, string> };
+  instr: { path: string; kind: 'file' | 'agentsRef'; refPath?: string };
   /** 该工具原生 MCP 配置文件（绝对路径） */
   mcpConfig: string;
   customized: boolean;
   /** MCP 配置路径是否为用户覆盖 */
   mcpConfigCustomized: boolean;
-  supports: { instructions: boolean; skills: boolean };
 }
 
 export interface TargetStatus {
@@ -23,11 +22,11 @@ export interface TargetStatus {
   skillsBroken: number;
   skillsForeign: number;
   skillsTotal: number;
-  instr: 'none' | 'ours' | 'ours-broken' | 'copy' | 'foreign' | 'unsupported';
+  instr: 'none' | 'ours' | 'ours-broken' | 'copy' | 'foreign';
   instrPath: string;
 }
 
-export type CellState = 'linked' | 'broken' | 'foreign' | 'none' | 'unsupported';
+export type CellState = 'linked' | 'broken' | 'foreign' | 'none';
 
 export interface NexusState {
   /** 后端 agent-nexus 版本（页脚展示） */
@@ -72,7 +71,7 @@ export interface ToolSnippet {
   id: string;
   label: string;
   file: string;
-  kind: 'cli' | 'json' | 'toml' | 'yaml';
+  kind: 'cli' | 'json' | 'toml';
   content: string;
   cli?: string;
   note?: string;
